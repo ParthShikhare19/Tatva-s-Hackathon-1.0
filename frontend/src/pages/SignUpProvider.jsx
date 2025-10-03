@@ -69,19 +69,28 @@ const SignUpProvider = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
+    <div className="auth-page">
+      <div className="auth-container">
+        <button className="back-button" onClick={() => navigate('/')}>
+          ← {t('backToHome')}
+        </button>
+        
         <div className="auth-header">
-          <FaTools className="auth-icon" />
-          <h1>{t('signUpAsProvider')}</h1>
-          <LanguageSwitcher />
+          <div className="logo-icon">
+            <FaTools />
+          </div>
+          <h1>{t('providerSignUp')}</h1>
         </div>
+
+        <LanguageSwitcher />
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {error && <div className="error-message">{error}</div>}
           
-          <div className="input-group">
-            <FaUser className="input-icon" />
+          <div className="form-group">
+            <div className="input-icon">
+              <FaUser />
+            </div>
             <input
               type="text"
               name="name"
@@ -92,8 +101,10 @@ const SignUpProvider = () => {
             />
           </div>
 
-          <div className="input-group">
-            <FaMapMarkerAlt className="input-icon" />
+          <div className="form-group">
+            <div className="input-icon">
+              <FaMapMarkerAlt />
+            </div>
             <input
               type="text"
               name="location"
@@ -104,8 +115,10 @@ const SignUpProvider = () => {
             />
           </div>
 
-          <div className="input-group">
-            <FaEnvelope className="input-icon" />
+          <div className="form-group">
+            <div className="input-icon">
+              <FaEnvelope />
+            </div>
             <input
               type="email"
               name="email"
@@ -115,8 +128,10 @@ const SignUpProvider = () => {
             />
           </div>
 
-          <div className="input-group">
-            <FaPhone className="input-icon" />
+          <div className="form-group">
+            <div className="input-icon">
+              <FaPhone />
+            </div>
             <input
               type="tel"
               name="mobile"
@@ -127,8 +142,10 @@ const SignUpProvider = () => {
             />
           </div>
 
-          <div className="input-group">
-            <FaWrench className="input-icon" />
+          <div className="form-group">
+            <div className="input-icon">
+              <FaWrench />
+            </div>
             <input
               type="text"
               name="serviceName"
@@ -139,8 +156,10 @@ const SignUpProvider = () => {
             />
           </div>
 
-          <div className="input-group">
-            <FaFileAlt className="input-icon" />
+          <div className="form-group">
+            <div className="input-icon">
+              <FaFileAlt />
+            </div>
             <textarea
               name="serviceDescription"
               placeholder={t('serviceDescription')}
@@ -150,8 +169,10 @@ const SignUpProvider = () => {
             />
           </div>
 
-          <div className="input-group">
-            <FaClock className="input-icon" />
+          <div className="form-group">
+            <div className="input-icon">
+              <FaClock />
+            </div>
             <input
               type="text"
               name="experience"
@@ -161,8 +182,10 @@ const SignUpProvider = () => {
             />
           </div>
 
-          <div className="input-group">
-            <FaLock className="input-icon" />
+          <div className="form-group">
+            <div className="input-icon">
+              <FaLock />
+            </div>
             <input
               type="password"
               name="password"
@@ -173,15 +196,17 @@ const SignUpProvider = () => {
             />
           </div>
 
-          <button type="submit" className="auth-button" disabled={loading}>
-            {loading ? t('signingUp') : t('signUp')}
+          <button type="submit" className="submit-button" disabled={loading}>
+            {loading ? t('signingUp') : t('submit')}
           </button>
         </form>
 
-        <p className="auth-link">
-          {t('alreadyHaveAccount')}{' '}
-          <a href="/signin">{t('signIn')}</a>
-        </p>
+        <div className="auth-footer">
+          <p>
+            {t('alreadyHaveAccount')}{' '}
+            <a href="/signin" className="link-button">{t('signIn')}</a>
+          </p>
+        </div>
       </div>
     </div>
   );

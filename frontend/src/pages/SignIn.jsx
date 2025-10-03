@@ -59,19 +59,24 @@ const SignIn = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
+    <div className="auth-page">
+      <div className="auth-container">
         <div className="auth-header">
-          <FaHandshake className="auth-icon" />
+          <div className="logo-icon">
+            <FaHandshake />
+          </div>
           <h1>{t('signIn')}</h1>
-          <LanguageSwitcher />
         </div>
+
+        <LanguageSwitcher />
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {error && <div className="error-message">{error}</div>}
           
-          <div className="input-group">
-            <FaEnvelope className="input-icon" />
+          <div className="form-group">
+            <div className="input-icon">
+              <FaEnvelope />
+            </div>
             <input
               type="text"
               name="emailOrMobile"
@@ -82,8 +87,10 @@ const SignIn = () => {
             />
           </div>
 
-          <div className="input-group">
-            <FaLock className="input-icon" />
+          <div className="form-group">
+            <div className="input-icon">
+              <FaLock />
+            </div>
             <input
               type="password"
               name="password"
@@ -94,15 +101,17 @@ const SignIn = () => {
             />
           </div>
 
-          <button type="submit" className="auth-button" disabled={loading}>
+          <button type="submit" className="submit-button" disabled={loading}>
             {loading ? t('signingIn') : t('signIn')}
           </button>
         </form>
 
-        <p className="auth-link">
-          {t('dontHaveAccount')}{' '}
-          <a href="/signup/customer">{t('signUp')}</a>
-        </p>
+        <div className="auth-footer">
+          <p>
+            {t('dontHaveAccount')}{' '}
+            <a href="/signup/customer" className="link-button">{t('signUp')}</a>
+          </p>
+        </div>
       </div>
     </div>
   );
