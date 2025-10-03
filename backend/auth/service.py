@@ -44,7 +44,12 @@ class AuthService:
             "role": new_user.role
         })
         
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer",
+            "user_type": new_user.role,
+            "name": new_user.name
+        }
 
     def login_user(self, login_data: UserLogin) -> dict:
         user = self.db.query(User).filter(User.phone_number == login_data.phone).first()
@@ -61,7 +66,12 @@ class AuthService:
             "role": user.role
         })
         
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer",
+            "user_type": user.role,
+            "name": user.name
+        }
 
     def get_user_by_id(self, user_id: int) -> User:
         user = self.db.query(User).filter(User.id == user_id).first()
