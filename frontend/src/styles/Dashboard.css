@@ -1,0 +1,131 @@
+.dashboard-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  padding: 20px;
+}
+
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-top: 80px;
+}
+
+.dashboard-container h1 {
+  color: white;
+  font-size: 48px;
+  text-align: center;
+  margin-bottom: 50px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.coming-soon {
+  background: white;
+  padding: 100px 40px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.coming-soon-icon {
+  font-size: 100px;
+  margin-bottom: 20px;
+  animation: float 3s ease-in-out infinite;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #1976D2;
+}
+
+.coming-soon-icon svg {
+  width: 100px;
+  height: 100px;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+.coming-soon p {
+  font-size: 32px;
+  color: #666;
+  margin: 0;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 15px;
+  }
+
+  .dashboard-container {
+    padding-top: 60px;
+  }
+
+  .dashboard-container h1 {
+    font-size: 36px;
+    margin-bottom: 35px;
+  }
+
+  .coming-soon {
+    padding: 60px 20px;
+    border-radius: 15px;
+  }
+
+  .coming-soon-icon svg {
+    width: 80px;
+    height: 80px;
+  }
+
+  .coming-soon p {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-page {
+    padding: 10px;
+  }
+
+  .dashboard-container {
+    padding-top: 50px;
+  }
+
+  .dashboard-container h1 {
+    font-size: 28px;
+    margin-bottom: 25px;
+  }
+
+  .coming-soon {
+    padding: 50px 15px;
+    border-radius: 12px;
+  }
+
+  .coming-soon-icon svg {
+    width: 70px;
+    height: 70px;
+  }
+
+  .coming-soon p {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .dashboard-container h1 {
+    font-size: 24px;
+  }
+
+  .coming-soon {
+    padding: 40px 12px;
+  }
+
+  .coming-soon-icon svg {
+    width: 60px;
+    height: 60px;
+  }
+
+  .coming-soon p {
+    font-size: 18px;
+  }
+}

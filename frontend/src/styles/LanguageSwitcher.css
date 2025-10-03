@@ -1,0 +1,142 @@
+.language-switcher {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.language-dropdown-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 2px solid #2196F3;
+  border-radius: 25px;
+  padding: 20px 20px;
+  transition: all 0.3s ease;
+}
+
+.language-dropdown-wrapper:hover {
+  background: #E3F2FD;
+  border-color: #1976D2;
+}
+
+.language-icon {
+  color: #1976D2;
+  font-size: 20px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.language-dropdown {
+  border: none;
+  background: transparent;
+  color: #1976D2;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  padding-right: 25px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  min-width: 100px;
+  line-height: 1.8;
+}
+
+.language-dropdown option {
+  padding: 12px 20px;
+  background: white;
+  color: #1976D2;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 2;
+  min-height: 50px;
+}
+
+.language-dropdown option:hover {
+  background: #E3F2FD;
+}
+
+.language-dropdown-wrapper::after {
+  content: '▼';
+  position: absolute;
+  right: 40px;
+  color: #1976D2;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.language-dropdown:focus + .language-icon,
+.language-dropdown-wrapper:focus-within {
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+@media (max-width: 768px) {
+  .language-switcher {
+    top: 10px;
+    right: 10px;
+  }
+
+  .language-dropdown-wrapper {
+    padding: 12px 16px;
+  }
+
+  .language-icon {
+    font-size: 18px;
+    margin-right: 8px;
+  }
+
+  .language-dropdown {
+    font-size: 15px;
+    min-width: 80px;
+    padding-right: 20px;
+    line-height: 1.6;
+  }
+
+  .language-dropdown option {
+    font-size: 15px;
+    padding: 10px 15px;
+    min-height: 45px;
+  }
+
+  .language-dropdown-wrapper::after {
+    right: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .language-switcher {
+    top: 8px;
+    right: 8px;
+  }
+
+  .language-dropdown-wrapper {
+    padding: 10px 12px;
+    border-radius: 20px;
+  }
+
+  .language-icon {
+    font-size: 16px;
+    margin-right: 6px;
+  }
+
+  .language-dropdown {
+    font-size: 14px;
+    min-width: 70px;
+    padding-right: 18px;
+  }
+
+  .language-dropdown option {
+    font-size: 14px;
+    padding: 8px 12px;
+    min-height: 40px;
+  }
+
+  .language-dropdown-wrapper::after {
+    right: 12px;
+    font-size: 10px;
+  }
+}
