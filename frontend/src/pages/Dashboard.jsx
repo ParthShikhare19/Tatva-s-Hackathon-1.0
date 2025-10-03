@@ -160,6 +160,9 @@ function CustomerDashboard({ t }) {
 function ProviderDashboard({ t, userName, handleLogout }) {
   const [oneTimeCode, setOneTimeCode] = useState(null);
   const [timeLeft, setTimeLeft] = useState(null);
+  const [showAcceptedJobs, setShowAcceptedJobs] = useState(false);
+  
+  // New requests waiting for accept/reject
   const [workRequests, setWorkRequests] = useState([
     {
       id: 1,
@@ -181,6 +184,26 @@ function ProviderDashboard({ t, userName, handleLogout }) {
       location: "Ahmedabad, Gujarat",
       service: "Carpentry",
       description: "Door frame repair",
+    },
+  ]);
+
+  // Accepted jobs that are not yet completed
+  const [acceptedJobs, setAcceptedJobs] = useState([
+    {
+      id: 101,
+      customerName: "Maria Garcia",
+      location: "Delhi, NCR",
+      service: "Plumbing",
+      description: "Bathroom pipe leakage",
+      acceptedDate: "2025-10-01",
+    },
+    {
+      id: 102,
+      customerName: "David Wilson",
+      location: "Bangalore, Karnataka",
+      service: "Electrical",
+      description: "AC installation required",
+      acceptedDate: "2025-10-02",
     },
   ]);
 
@@ -223,16 +246,39 @@ function ProviderDashboard({ t, userName, handleLogout }) {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleAcceptRequest = (requestId) => {
+  const handleAcceptRequest = (request) => {
+    // Move from workRequests to acceptedJobs
+    setAcceptedJobs((prev) => [
+      ...prev,
+      {
+        ...request,
+        id: Date.now(), // Generate new ID for accepted job
+        acceptedDate: new Date().toISOString().split('T')[0],
+      },
+    ]);
+    setWorkRequests((prev) => prev.filter((req) => req.id !== request.id));
     // TODO: Send accept request to backend
-    console.log("Accepted request:", requestId);
-    setWorkRequests((prev) => prev.filter((req) => req.id !== requestId));
+    console.log("Accepted request:", request.id);
   };
 
   const handleRejectRequest = (requestId) => {
+    setWorkRequests((prev) => prev.filter((req) => req.id !== requestId));
     // TODO: Send reject request to backend
     console.log("Rejected request:", requestId);
-    setWorkRequests((prev) => prev.filter((req) => req.id !== requestId));
+  };
+
+  const handleCompleteJob = (jobId) => {
+    setAcceptedJobs((prev) => prev.filter((job) => job.id !== jobId));
+    // TODO: Send complete job request to backend
+    console.log("Completed job:", jobId);
+  };
+
+  const handleViewAcceptedJobs = () => {
+    setShowAcceptedJobs(true);
+  };
+
+  const handleCloseAcceptedJobs = () => {
+    setShowAcceptedJobs(false);
   };
 
   return (
@@ -275,11 +321,15 @@ function ProviderDashboard({ t, userName, handleLogout }) {
               <p className="stat-number">0</p>
             </div>
           </div>
-          <div className="stat-card">
+          <div 
+            className="stat-card stat-clickable" 
+            onClick={handleViewAcceptedJobs}
+            title="Click to view accepted jobs"
+          >
             <FaClipboardList className="stat-icon" />
             <div className="stat-info">
-              <h4>Requests Pending</h4>
-              <p className="stat-number">{workRequests.length}</p>
+              <h4>Accepted Jobs (Pending Completion)</h4>
+              <p className="stat-number">{acceptedJobs.length}</p>
             </div>
           </div>
         </div>
@@ -337,7 +387,7 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                   <div className="request-actions">
                     <button
                       className="accept-btn"
-                      onClick={() => handleAcceptRequest(request.id)}
+                      onClick={() => handleAcceptRequest(request)}
                     >
                       <FaCheck /> Accept
                     </button>
@@ -359,6 +409,66 @@ function ProviderDashboard({ t, userName, handleLogout }) {
             </div>
           )}
         </section>
+
+        {/* Accepted Jobs Modal/Overlay */}
+        {showAcceptedJobs && (
+          <div className="modal-overlay" onClick={handleCloseAcceptedJobs}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Accepted Jobs (Pending Completion)</h3>
+                <button className="modal-close-btn" onClick={handleCloseAcceptedJobs}>
+                  <FaTimes />
+                </button>
+              </div>
+              <div className="modal-body">
+                {acceptedJobs.length > 0 ? (
+                  <div className="accepted-jobs-list">
+                    {acceptedJobs.map((job) => (
+                      <div key={job.id} className="accepted-job-card">
+                        <div className="job-header">
+                          <div className="customer-info">
+                            <FaUser className="customer-icon" />
+                            <div>
+                              <h4 className="customer-name">{job.customerName}</h4>
+                              <p className="customer-location">
+                                <FaMapMarkerAlt className="location-icon" />
+                                {job.location}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="accepted-date">
+                            <FaCalendarAlt className="date-icon" />
+                            <span>Accepted: {job.acceptedDate}</span>
+                          </div>
+                        </div>
+                        <div className="job-body">
+                          <div className="service-badge">
+                            <FaTools /> {job.service}
+                          </div>
+                          <p className="job-description">{job.description}</p>
+                        </div>
+                        <div className="job-actions">
+                          <button
+                            className="complete-btn"
+                            onClick={() => handleCompleteJob(job.id)}
+                          >
+                            <FaCheckCircle /> Mark as Completed
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <FaCheckCircle className="empty-icon" />
+                    <p>No accepted jobs pending completion</p>
+                    <p className="empty-subtitle">Jobs you accept will appear here</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
