@@ -52,6 +52,28 @@ class ApiService {
     return this.request('/auth/me');
   }
 
+  // OTP endpoints
+  async sendOtp(phone) {
+    return this.request('/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    });
+  }
+
+  async verifyOtp(phone, otp) {
+    return this.request('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phone, otp }),
+    });
+  }
+
+  async resendOtp(phone) {
+    return this.request('/auth/resend-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    });
+  }
+
   // Token management
   setAuthToken(token) {
     localStorage.setItem('authToken', token);

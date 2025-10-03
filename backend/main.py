@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routes.job_codes import router as job_codes_router
 from .routes.providers import router as providers_router
 from .routes.customers import router as customers_router
+from .routes.otp import router as otp_router
 from .Database_connection.db import engine, Base
 from auth import router as auth_router, create_tables
 
@@ -17,7 +18,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173" , "http://localhost:5175"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,6 +26,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth_router)
+app.include_router(otp_router)
 app.include_router(job_codes_router)
 app.include_router(providers_router)
 app.include_router(customers_router)

@@ -17,3 +17,14 @@ python-multipart==0.0.6
 
 # For potential future integrations
 requests==2.31.0
+
+# Authentication and OTP
+PyJWT==2.8.0
+httpx==0.25.2
+twilio==9.8.3
+
+# JWT Authentication
+PyJWT==2.8.0
+
+# For MSG91 OTP SMS
+httpx==0.25.2

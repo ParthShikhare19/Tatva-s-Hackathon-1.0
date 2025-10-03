@@ -60,7 +60,7 @@
   font-size: 16px;
   cursor: pointer;
   padding: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   font-weight: 600;
 }
 
@@ -70,12 +70,12 @@
 
 .auth-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .auth-header .logo-icon {
   font-size: 60px;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   display: flex;
   justify-content: center;
   align-items: center;
