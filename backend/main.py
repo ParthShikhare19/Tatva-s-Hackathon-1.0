@@ -1,6 +1,9 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from .routes.job_codes import router as job_codes_router
+from .routes.providers import router as providers_router
 from .Database_connection.db import engine, Base
+from auth import router as auth_router, create_tables
 
 # Don't auto-create tables - they already exist in database
 # Base.metadata.create_all(bind=engine)
@@ -8,22 +11,6 @@ from .Database_connection.db import engine, Base
 app = FastAPI(
     title="Community Connection Platform API",
     description="API for local service trust platform with completion code verification",
-    version="1.0.0"
-)
-
-# Include routers
-app.include_router(job_codes_router)
-
-@app.get("/")
-def read_root():
-    return {"message": "Community Connection Platform API - Ready!"}
-
-from fastapi.middleware.cors import CORSMiddleware
-from auth import router as auth_router, create_tables
-
-app = FastAPI(
-    title="Community Services API",
-    description="Local Services Platform with Neon PostgreSQL",
     version="1.0.0"
 )
 
@@ -35,7 +22,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
 app.include_router(auth_router)
+app.include_router(job_codes_router)
+app.include_router(providers_router)
 
 @app.on_event("startup")
 def startup_event():
@@ -44,7 +34,7 @@ def startup_event():
 @app.get("/")
 def root():
     return {
-        "message": "Community Services API running with Neon PostgreSQL!",
+        "message": "Community Connection Platform API - Ready!",
         "docs": "/docs"
     }
 
