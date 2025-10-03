@@ -7,5 +7,8 @@ python-multipart==0.0.6
 python-dotenv==1.0.0
 bcrypt==4.0.1
 passlib[bcrypt]==1.7.4
-pyjwt
+PyJWT==2.8.0
 psycopg2
+httpx==0.25.0
+httpx==0.25.2
+twilio==9.8.3
