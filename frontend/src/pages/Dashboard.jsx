@@ -1,38 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../contexts/LanguageContext';
-import { 
-  FaUserCircle, FaSearch, FaTools, FaCalendarAlt, FaHeart, FaStar, 
-  FaMoneyBillWave, FaClipboardList, FaChartLine, FaPlus, FaSignOutAlt,
-  FaMapMarkerAlt, FaClock, FaCheckCircle
-} from 'react-icons/fa';
-import '../styles/Dashboard.css';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../contexts/LanguageContext";
+import {
+  FaUserCircle,
+  FaSearch,
+  FaTools,
+  FaCalendarAlt,
+  FaHeart,
+  FaStar,
+  FaMoneyBillWave,
+  FaClipboardList,
+  FaChartLine,
+  FaPlus,
+  FaSignOutAlt,
+  FaMapMarkerAlt,
+  FaClock,
+  FaCheckCircle,
+} from "react-icons/fa";
+import "../styles/Dashboard.css";
 
 function Dashboard() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [userType, setUserType] = useState(null);
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState("");
 
   useEffect(() => {
     // Get user info from localStorage
-    const storedUserType = localStorage.getItem('userType');
-    const storedUserName = localStorage.getItem('userName');
-    
+    const storedUserType = localStorage.getItem("userType");
+    const storedUserName = localStorage.getItem("userName");
+
     if (storedUserType) {
       setUserType(storedUserType);
-      setUserName(storedUserName || 'User');
+      setUserName(storedUserName || "User");
     } else {
       // If no user type found, redirect to sign in
-      navigate('/signin');
+      navigate("/signin");
     }
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userType');
-    localStorage.removeItem('userName');
-    navigate('/');
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("userType");
+    localStorage.removeItem("userName");
+    navigate("/");
   };
 
   if (!userType) {
@@ -41,23 +52,33 @@ function Dashboard() {
 
   return (
     <div className="dashboard-page">
-      {/* Header */}
-      <header className="dashboard-header">
-        <div className="header-content">
-          <div className="user-info">
-            <FaUserCircle className="user-avatar" />
-            <div>
-              <h2>{t('welcomeBack')}</h2>
-              <p className="user-name">{userName}</p>
+      {/* Header - Only for Customer */}
+      {userType === "customer" && (
+        <header className="dashboard-header">
+          <div className="header-content">
+            <div className="user-info">
+              <FaUserCircle className="user-avatar" />
+              <div>
+                <h2>{t("welcomeBack")}</h2>
+                <p className="user-name">{userName}</p>
+              </div>
             </div>
+            <button className="logout-btn" onClick={handleLogout}>
+              <FaSignOutAlt /> {t("logout")}
+            </button>
           </div>
-          <button className="logout-btn" onClick={handleLogout}>
-            <FaSignOutAlt /> {t('logout')}
-          </button>
-        </div>
-      </header>
+        </header>
+      )}
 
-      {userType === 'customer' ? <CustomerDashboard t={t} /> : <ProviderDashboard t={t} />}
+      {userType === "customer" ? (
+        <CustomerDashboard t={t} />
+      ) : (
+        <ProviderDashboard
+          t={t}
+          userName={userName}
+          handleLogout={handleLogout}
+        />
+      )}
     </div>
   );
 }
@@ -68,10 +89,10 @@ function CustomerDashboard({ t }) {
     <div className="dashboard-content">
       {/* Search Section */}
       <section className="search-section">
-        <h3>{t('findServices')}</h3>
+        <h3>{t("findServices")}</h3>
         <div className="search-bar">
           <FaSearch className="search-icon" />
-          <input type="text" placeholder={t('searchPlaceholder')} />
+          <input type="text" placeholder={t("searchPlaceholder")} />
         </div>
       </section>
 
@@ -80,21 +101,21 @@ function CustomerDashboard({ t }) {
         <div className="stat-card">
           <FaCalendarAlt className="stat-icon" />
           <div className="stat-info">
-            <h4>{t('activeBookings')}</h4>
+            <h4>{t("activeBookings")}</h4>
             <p className="stat-number">0</p>
           </div>
         </div>
         <div className="stat-card">
           <FaClock className="stat-icon" />
           <div className="stat-info">
-            <h4>{t('bookingHistory')}</h4>
+            <h4>{t("bookingHistory")}</h4>
             <p className="stat-number">0</p>
           </div>
         </div>
         <div className="stat-card">
           <FaHeart className="stat-icon" />
           <div className="stat-info">
-            <h4>{t('savedProviders')}</h4>
+            <h4>{t("savedProviders")}</h4>
             <p className="stat-number">0</p>
           </div>
         </div>
@@ -103,8 +124,8 @@ function CustomerDashboard({ t }) {
       {/* Categories Section */}
       <section className="categories-section">
         <div className="section-header">
-          <h3>{t('browseCategories')}</h3>
-          <button className="view-all-btn">{t('viewAll')}</button>
+          <h3>{t("browseCategories")}</h3>
+          <button className="view-all-btn">{t("viewAll")}</button>
         </div>
         <div className="categories-grid">
           <CategoryCard icon={<FaTools />} title="Plumbing" />
@@ -119,13 +140,13 @@ function CustomerDashboard({ t }) {
       {/* Nearby Providers */}
       <section className="providers-section">
         <div className="section-header">
-          <h3>{t('nearbyProviders')}</h3>
-          <button className="view-all-btn">{t('viewAll')}</button>
+          <h3>{t("nearbyProviders")}</h3>
+          <button className="view-all-btn">{t("viewAll")}</button>
         </div>
         <div className="empty-state">
           <FaMapMarkerAlt className="empty-icon" />
-          <p>{t('noDataYet')}</p>
-          <button className="get-started-btn">{t('getStarted')}</button>
+          <p>{t("noDataYet")}</p>
+          <button className="get-started-btn">{t("getStarted")}</button>
         </div>
       </section>
     </div>
@@ -133,86 +154,78 @@ function CustomerDashboard({ t }) {
 }
 
 // Provider Dashboard Component
-function ProviderDashboard({ t }) {
+function ProviderDashboard({ t, userName, handleLogout }) {
+  const [oneTimeCode, setOneTimeCode] = useState(null);
+
+  const handleGenerateCode = () => {
+    // Generate a random 6-digit code for now
+    const code = Math.floor(100000 + Math.random() * 900000);
+    setOneTimeCode(code);
+    // TODO: Send this code to backend
+  };
+
   return (
-    <div className="dashboard-content">
-      {/* Stats Cards */}
-      <div className="stats-grid">
-        <div className="stat-card stat-primary">
-          <FaMoneyBillWave className="stat-icon" />
-          <div className="stat-info">
-            <h4>{t('totalEarnings')}</h4>
-            <p className="stat-number">₹0</p>
+    <div className="dashboard-page">
+      {/* Provider Header - Same style as Customer */}
+      <header className="dashboard-header">
+        <div className="header-content">
+          <div className="user-info">
+            <FaUserCircle className="user-avatar" />
+            <div>
+              <h2>{t("welcomeBack")}</h2>
+              <p className="user-name">{userName}</p>
+            </div>
           </div>
-        </div>
-        <div className="stat-card stat-warning">
-          <FaClipboardList className="stat-icon" />
-          <div className="stat-info">
-            <h4>{t('pendingRequests')}</h4>
-            <p className="stat-number">0</p>
-          </div>
-        </div>
-        <div className="stat-card stat-success">
-          <FaCheckCircle className="stat-icon" />
-          <div className="stat-info">
-            <h4>{t('completedJobs')}</h4>
-            <p className="stat-number">0</p>
-          </div>
-        </div>
-        <div className="stat-card stat-info">
-          <FaStar className="stat-icon" />
-          <div className="stat-info">
-            <h4>{t('averageRating')}</h4>
-            <p className="stat-number">0.0</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <section className="quick-actions">
-        <button className="action-btn action-primary">
-          <FaPlus /> {t('addService')}
-        </button>
-      </section>
-
-      {/* Service Requests */}
-      <section className="requests-section">
-        <div className="section-header">
-          <h3>{t('serviceRequests')}</h3>
-          <button className="view-all-btn">{t('viewAll')}</button>
-        </div>
-        <div className="empty-state">
-          <FaClipboardList className="empty-icon" />
-          <p>{t('noDataYet')}</p>
-          <p className="empty-subtitle">{t('getStarted')}</p>
-        </div>
-      </section>
-
-      {/* My Services */}
-      <section className="services-section">
-        <div className="section-header">
-          <h3>{t('myServices')}</h3>
-          <button className="view-all-btn">{t('viewAll')}</button>
-        </div>
-        <div className="empty-state">
-          <FaTools className="empty-icon" />
-          <p>{t('noDataYet')}</p>
-          <button className="get-started-btn">
-            <FaPlus /> {t('addService')}
+          <button className="logout-btn" onClick={handleLogout}>
+            <FaSignOutAlt /> {t("logout")}
           </button>
         </div>
-      </section>
+      </header>
 
-      {/* Earnings Chart Placeholder */}
-      <section className="earnings-section">
-        <div className="section-header">
-          <h3>{t('earnings')}</h3>
+      <div className="dashboard-content">
+        {/* Welcome Message */}
+        <section className="welcome-section">
+          <h3>Welcome {userName}</h3>
+        </section>
+
+        {/* Stats Cards */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <FaStar className="stat-icon" />
+            <div className="stat-info">
+              <h4>{t("averageRating")}</h4>
+              <p className="stat-number">0.0</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <FaCheckCircle className="stat-icon" />
+            <div className="stat-info">
+              <h4>Customers Served</h4>
+              <p className="stat-number">0</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <FaClipboardList className="stat-icon" />
+            <div className="stat-info">
+              <h4>Requests Pending</h4>
+              <p className="stat-number">0</p>
+            </div>
+          </div>
         </div>
-        <div className="chart-placeholder">
-          <FaChartLine className="chart-icon" />
-          <p>{t('noDataYet')}</p>
-        </div>
-      </section>
+
+        {/* Generate One-Time Code Button */}
+        <section className="code-generation-section">
+          <button className="generate-code-btn" onClick={handleGenerateCode}>
+            <FaPlus /> Generate One-Time Code
+          </button>
+          {oneTimeCode && (
+            <div className="code-display">
+              <p>Your One-Time Code:</p>
+              <h2 className="code-value">{oneTimeCode}</h2>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
