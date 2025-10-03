@@ -21,3 +21,11 @@ class Provider(Base):
     average_rating = Column(Numeric(2, 1), default=0.0)
     jobs_completed = Column(Integer, default=0)
     is_verified = Column(Boolean, default=False)
+
+class Customer(Base):
+    __tablename__ = "customers"
+    
+    user_id = Column(Integer, primary_key=True)
+    address = Column(Text)
+    location_name = Column(String(255))
+    preferences = Column(String(500))
