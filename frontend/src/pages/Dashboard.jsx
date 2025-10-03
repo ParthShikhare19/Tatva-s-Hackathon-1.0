@@ -16,6 +16,9 @@ import {
   FaMapMarkerAlt,
   FaClock,
   FaCheckCircle,
+  FaCheck,
+  FaTimes,
+  FaUser,
 } from "react-icons/fa";
 import "../styles/Dashboard.css";
 
@@ -156,12 +159,80 @@ function CustomerDashboard({ t }) {
 // Provider Dashboard Component
 function ProviderDashboard({ t, userName, handleLogout }) {
   const [oneTimeCode, setOneTimeCode] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [workRequests, setWorkRequests] = useState([
+    {
+      id: 1,
+      customerName: "John Doe",
+      location: "Mumbai, Maharashtra",
+      service: "Plumbing",
+      description: "Kitchen sink repair needed",
+    },
+    {
+      id: 2,
+      customerName: "Sarah Smith",
+      location: "Pune, Maharashtra",
+      service: "Electrical",
+      description: "Wiring issue in bedroom",
+    },
+    {
+      id: 3,
+      customerName: "Raj Patel",
+      location: "Ahmedabad, Gujarat",
+      service: "Carpentry",
+      description: "Door frame repair",
+    },
+  ]);
 
   const handleGenerateCode = () => {
     // Generate a random 6-digit code for now
     const code = Math.floor(100000 + Math.random() * 900000);
     setOneTimeCode(code);
+    // Set timer for 5 minutes (300 seconds)
+    setTimeLeft(300);
     // TODO: Send this code to backend
+  };
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) {
+      if (timeLeft === 0) {
+        setOneTimeCode(null);
+        setTimeLeft(null);
+      }
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          setOneTimeCode(null);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const handleAcceptRequest = (requestId) => {
+    // TODO: Send accept request to backend
+    console.log("Accepted request:", requestId);
+    setWorkRequests((prev) => prev.filter((req) => req.id !== requestId));
+  };
+
+  const handleRejectRequest = (requestId) => {
+    // TODO: Send reject request to backend
+    console.log("Rejected request:", requestId);
+    setWorkRequests((prev) => prev.filter((req) => req.id !== requestId));
   };
 
   return (
@@ -208,7 +279,7 @@ function ProviderDashboard({ t, userName, handleLogout }) {
             <FaClipboardList className="stat-icon" />
             <div className="stat-info">
               <h4>Requests Pending</h4>
-              <p className="stat-number">0</p>
+              <p className="stat-number">{workRequests.length}</p>
             </div>
           </div>
         </div>
@@ -222,6 +293,69 @@ function ProviderDashboard({ t, userName, handleLogout }) {
             <div className="code-display">
               <p>Your One-Time Code:</p>
               <h2 className="code-value">{oneTimeCode}</h2>
+              {timeLeft && (
+                <div className="code-timer">
+                  <FaClock className="timer-icon" />
+                  <p className="timer-text">
+                    Expires in: <span className="timer-value">{formatTime(timeLeft)}</span>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Work Requests Section */}
+        <section className="work-requests-section">
+          <div className="section-header">
+            <h3>Work Requests from Customers</h3>
+            <span className="requests-count">{workRequests.length} pending</span>
+          </div>
+          
+          {workRequests.length > 0 ? (
+            <div className="requests-grid">
+              {workRequests.map((request) => (
+                <div key={request.id} className="request-card">
+                  <div className="request-header">
+                    <div className="customer-info">
+                      <FaUser className="customer-icon" />
+                      <div>
+                        <h4 className="customer-name">{request.customerName}</h4>
+                        <p className="customer-location">
+                          <FaMapMarkerAlt className="location-icon" />
+                          {request.location}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="request-body">
+                    <div className="service-badge">
+                      <FaTools /> {request.service}
+                    </div>
+                    <p className="request-description">{request.description}</p>
+                  </div>
+                  <div className="request-actions">
+                    <button
+                      className="accept-btn"
+                      onClick={() => handleAcceptRequest(request.id)}
+                    >
+                      <FaCheck /> Accept
+                    </button>
+                    <button
+                      className="reject-btn"
+                      onClick={() => handleRejectRequest(request.id)}
+                    >
+                      <FaTimes /> Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <FaClipboardList className="empty-icon" />
+              <p>No pending work requests</p>
+              <p className="empty-subtitle">New requests will appear here</p>
             </div>
           )}
         </section>
