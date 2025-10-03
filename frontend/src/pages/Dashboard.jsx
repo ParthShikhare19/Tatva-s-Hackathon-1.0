@@ -20,6 +20,8 @@ import {
   FaCheck,
   FaTimes,
   FaUser,
+  FaBookmark,
+  FaRegBookmark,
 } from "react-icons/fa";
 import "../styles/Dashboard.css";
 
@@ -44,10 +46,15 @@ function Dashboard() {
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userType");
-    localStorage.removeItem("userName");
-    navigate("/");
+    // Show confirmation dialog in selected language
+    const confirmed = window.confirm(t("common.confirmLogout"));
+
+    if (confirmed) {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("userType");
+      localStorage.removeItem("userName");
+      navigate("/");
+    }
   };
 
   if (!userType) {
@@ -97,7 +104,9 @@ function CustomerDashboard({ t }) {
   const [selectedRating, setSelectedRating] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
+  const [showSavedProviders, setShowSavedProviders] = useState(false);
+  const [savedProviders, setSavedProviders] = useState([]);
   const providersPerPage = 6;
 
   // Sample provider data
@@ -176,7 +185,15 @@ function CustomerDashboard({ t }) {
     },
   ]);
 
-  const categories = ["All", "Plumbing", "Electrical", "Carpentry", "Cleaning", "Painting", "Gardening"];
+  const categories = [
+    "All",
+    "Plumbing",
+    "Electrical",
+    "Carpentry",
+    "Cleaning",
+    "Painting",
+    "Gardening",
+  ];
   const locations = ["All", "Mumbai", "Delhi", "Pune", "Bangalore"];
   const ratings = [
     { label: "All Ratings", value: "all" },
@@ -187,36 +204,70 @@ function CustomerDashboard({ t }) {
 
   // Filter providers based on search and filters
   const filteredProviders = providers.filter((provider) => {
-    const matchesSearch = provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         provider.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         provider.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = selectedCategory === "all" || 
-                           provider.service.toLowerCase() === selectedCategory.toLowerCase();
-    
-    const matchesRating = selectedRating === "all" || 
-                         provider.rating >= parseFloat(selectedRating);
-    
-    const matchesLocation = selectedLocation === "all" || 
-                           provider.location.toLowerCase() === selectedLocation.toLowerCase();
-    
+    const matchesSearch =
+      provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      provider.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      provider.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory =
+      selectedCategory === "all" ||
+      provider.service.toLowerCase() === selectedCategory.toLowerCase();
+
+    const matchesRating =
+      selectedRating === "all" || provider.rating >= parseFloat(selectedRating);
+
+    const matchesLocation =
+      selectedLocation === "all" ||
+      provider.location.toLowerCase() === selectedLocation.toLowerCase();
+
     return matchesSearch && matchesCategory && matchesRating && matchesLocation;
   });
 
   // Pagination
   const indexOfLastProvider = currentPage * providersPerPage;
   const indexOfFirstProvider = indexOfLastProvider - providersPerPage;
-  const currentProviders = filteredProviders.slice(indexOfFirstProvider, indexOfLastProvider);
+  const currentProviders = filteredProviders.slice(
+    indexOfFirstProvider,
+    indexOfLastProvider
+  );
   const totalPages = Math.ceil(filteredProviders.length / providersPerPage);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleCategorySelect = (category) => {
     setSelectedCategory(category === "All" ? "all" : category);
     setCurrentPage(1);
+  };
+
+  const handleSaveProvider = (provider) => {
+    const isAlreadySaved = savedProviders.some(p => p.id === provider.id);
+    
+    if (isAlreadySaved) {
+      // Remove from saved
+      setSavedProviders(prev => prev.filter(p => p.id !== provider.id));
+    } else {
+      // Add to saved
+      setSavedProviders(prev => [...prev, provider]);
+    }
+  };
+
+  const isProviderSaved = (providerId) => {
+    return savedProviders.some(p => p.id === providerId);
+  };
+
+  const handleViewSavedProviders = () => {
+    setShowSavedProviders(true);
+  };
+
+  const handleCloseSavedProviders = () => {
+    setShowSavedProviders(false);
+  };
+
+  const handleRemoveSavedProvider = (providerId) => {
+    setSavedProviders(prev => prev.filter(p => p.id !== providerId));
   };
 
   return (
@@ -237,11 +288,15 @@ function CustomerDashboard({ t }) {
             <p className="stat-number">0</p>
           </div>
         </div>
-        <div className="stat-card">
-          <FaHeart className="stat-icon" />
+        <div 
+          className="stat-card stat-clickable"
+          onClick={handleViewSavedProviders}
+          title="Click to view saved providers"
+        >
+          <FaBookmark className="stat-icon" />
           <div className="stat-info">
-            <h4>{t("dashboard.customer.savedProviders")}</h4>
-            <p className="stat-number">0</p>
+            <h4>{t("savedProviders")}</h4>
+            <p className="stat-number">{savedProviders.length}</p>
           </div>
         </div>
       </div>
@@ -251,8 +306,8 @@ function CustomerDashboard({ t }) {
         <div className="search-container">
           <div className="search-bar">
             <FaSearch className="search-icon" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => {
@@ -261,7 +316,7 @@ function CustomerDashboard({ t }) {
               }}
             />
           </div>
-          <button 
+          <button
             className="filter-toggle-btn"
             onClick={() => setShowFilters(!showFilters)}
           >
@@ -274,7 +329,11 @@ function CustomerDashboard({ t }) {
           {categories.map((category) => (
             <button
               key={category}
-              className={`category-pill ${selectedCategory === (category === "All" ? "all" : category) ? "active" : ""}`}
+              className={`category-pill ${
+                selectedCategory === (category === "All" ? "all" : category)
+                  ? "active"
+                  : ""
+              }`}
               onClick={() => handleCategorySelect(category)}
             >
               {category}
@@ -287,7 +346,7 @@ function CustomerDashboard({ t }) {
           <div className="advanced-filters">
             <div className="filter-group">
               <label>Rating</label>
-              <select 
+              <select
                 value={selectedRating}
                 onChange={(e) => {
                   setSelectedRating(e.target.value);
@@ -303,7 +362,7 @@ function CustomerDashboard({ t }) {
             </div>
             <div className="filter-group">
               <label>Location</label>
-              <select 
+              <select
                 value={selectedLocation}
                 onChange={(e) => {
                   setSelectedLocation(e.target.value);
@@ -311,13 +370,16 @@ function CustomerDashboard({ t }) {
                 }}
               >
                 {locations.map((location) => (
-                  <option key={location} value={location === "All" ? "all" : location}>
+                  <option
+                    key={location}
+                    value={location === "All" ? "all" : location}
+                  >
                     {location}
                   </option>
                 ))}
               </select>
             </div>
-            <button 
+            <button
               className="clear-filters-btn"
               onClick={() => {
                 setSelectedCategory("all");
@@ -357,7 +419,9 @@ function CustomerDashboard({ t }) {
                       <div className="provider-rating">
                         <FaStar className="star-icon" />
                         <span className="rating-value">{provider.rating}</span>
-                        <span className="reviews-count">({provider.reviews} reviews)</span>
+                        <span className="reviews-count">
+                          ({provider.reviews} reviews)
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -365,7 +429,9 @@ function CustomerDashboard({ t }) {
                     <div className="service-badge">
                       <FaTools /> {provider.service}
                     </div>
-                    <p className="provider-description">{provider.description}</p>
+                    <p className="provider-description">
+                      {provider.description}
+                    </p>
                     <div className="provider-location">
                       <FaMapMarkerAlt className="location-icon" />
                       <span>{provider.location}</span>
@@ -373,8 +439,12 @@ function CustomerDashboard({ t }) {
                   </div>
                   <div className="provider-actions">
                     <button className="book-btn">Book Now</button>
-                    <button className="save-btn">
-                      <FaHeart />
+                    <button 
+                      className={`save-btn ${isProviderSaved(provider.id) ? 'saved' : ''}`}
+                      onClick={() => handleSaveProvider(provider)}
+                      title={isProviderSaved(provider.id) ? "Remove from saved" : "Save provider"}
+                    >
+                      {isProviderSaved(provider.id) ? <FaBookmark /> : <FaRegBookmark />}
                     </button>
                   </div>
                 </div>
@@ -384,19 +454,21 @@ function CustomerDashboard({ t }) {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="pagination">
-                <button 
+                <button
                   className="pagination-btn"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
                 >
                   Previous
                 </button>
-                
+
                 <div className="pagination-numbers">
                   {[...Array(totalPages)].map((_, index) => (
                     <button
                       key={index + 1}
-                      className={`pagination-number ${currentPage === index + 1 ? 'active' : ''}`}
+                      className={`pagination-number ${
+                        currentPage === index + 1 ? "active" : ""
+                      }`}
                       onClick={() => handlePageChange(index + 1)}
                     >
                       {index + 1}
@@ -404,7 +476,7 @@ function CustomerDashboard({ t }) {
                   ))}
                 </div>
 
-                <button 
+                <button
                   className="pagination-btn"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
@@ -418,10 +490,72 @@ function CustomerDashboard({ t }) {
           <div className="empty-state">
             <FaMapMarkerAlt className="empty-icon" />
             <p>No service providers found</p>
-            <p className="empty-subtitle">Try adjusting your search or filters</p>
+            <p className="empty-subtitle">
+              Try adjusting your search or filters
+            </p>
           </div>
         )}
       </section>
+
+      {/* Saved Providers Modal */}
+      {showSavedProviders && (
+        <div className="modal-overlay" onClick={handleCloseSavedProviders}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Saved Providers</h3>
+              <button className="modal-close-btn" onClick={handleCloseSavedProviders}>
+                <FaTimes />
+              </button>
+            </div>
+            <div className="modal-body">
+              {savedProviders.length > 0 ? (
+                <div className="saved-providers-list">
+                  {savedProviders.map((provider) => (
+                    <div key={provider.id} className="saved-provider-card">
+                      <div className="provider-header">
+                        <FaUserCircle className="provider-avatar" />
+                        <div className="provider-info">
+                          <h4 className="provider-name">{provider.name}</h4>
+                          <div className="provider-rating">
+                            <FaStar className="star-icon" />
+                            <span className="rating-value">{provider.rating}</span>
+                            <span className="reviews-count">({provider.reviews} reviews)</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="provider-body">
+                        <div className="service-badge">
+                          <FaTools /> {provider.service}
+                        </div>
+                        <p className="provider-description">{provider.description}</p>
+                        <div className="provider-location">
+                          <FaMapMarkerAlt className="location-icon" />
+                          <span>{provider.location}</span>
+                        </div>
+                      </div>
+                      <div className="provider-actions">
+                        <button className="book-btn">Book Now</button>
+                        <button 
+                          className="remove-btn"
+                          onClick={() => handleRemoveSavedProvider(provider.id)}
+                        >
+                          <FaTimes /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <FaBookmark className="empty-icon" />
+                  <p>No saved providers yet</p>
+                  <p className="empty-subtitle">Save providers to easily find them later</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -502,15 +636,25 @@ function ProviderDashboard({ t, userName, handleLogout }) {
   };
 
   const handleRejectRequest = (requestId) => {
-    setWorkRequests((prev) => prev.filter((req) => req.id !== requestId));
-    // TODO: Send reject request to backend
-    console.log("Rejected request:", requestId);
+    // Show confirmation dialog in selected language
+    const confirmed = window.confirm(t("common.confirmRejectRequest"));
+
+    if (confirmed) {
+      setWorkRequests((prev) => prev.filter((req) => req.id !== requestId));
+      // TODO: Send reject request to backend
+      console.log("Rejected request:", requestId);
+    }
   };
 
   const handleCancelJob = (jobId) => {
-    setAcceptedJobs((prev) => prev.filter((job) => job.id !== jobId));
-    // TODO: Send cancel job request to backend
-    console.log("Cancelled job:", jobId);
+    // Show confirmation dialog in selected language
+    const confirmed = window.confirm(t("common.confirmCancelJob"));
+
+    if (confirmed) {
+      setAcceptedJobs((prev) => prev.filter((job) => job.id !== jobId));
+      // TODO: Send cancel job request to backend
+      console.log("Cancelled job:", jobId);
+    }
   };
 
   const handleViewAcceptedJobs = () => {
@@ -683,16 +827,20 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                             <FaTools /> {job.service}
                           </div>
                           <p className="job-description">{job.description}</p>
-                          
+
                           {/* Display One-Time Code */}
                           {job.oneTimeCode && (
                             <div className="job-code-display">
                               <div className="code-label">
                                 <FaClipboardList className="code-icon" />
-                                <span>{t("dashboard.provider.yourOneTimeCode")}</span>
+                                <span>
+                                  {t("dashboard.provider.yourOneTimeCode")}
+                                </span>
                               </div>
                               <div className="code-value-container">
-                                <h3 className="code-value">{job.oneTimeCode}</h3>
+                                <h3 className="code-value">
+                                  {job.oneTimeCode}
+                                </h3>
                               </div>
                             </div>
                           )}
@@ -702,8 +850,7 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                             className="cancel-btn"
                             onClick={() => handleCancelJob(job.id)}
                           >
-                            <FaTimes />{" "}
-                            {t("dashboard.provider.cancelRequest")}
+                            <FaTimes /> {t("dashboard.provider.cancelRequest")}
                           </button>
                         </div>
                       </div>
