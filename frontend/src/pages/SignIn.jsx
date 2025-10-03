@@ -47,7 +47,11 @@ const SignIn = () => {
         throw new Error(data.detail || 'Login failed');
       }
 
+      // Store auth token and user info
       localStorage.setItem('authToken', data.access_token);
+      localStorage.setItem('userType', data.user_type || 'customer');
+      localStorage.setItem('userName', data.name || formData.emailOrMobile);
+      
       navigate('/dashboard');
 
     } catch (error) {
