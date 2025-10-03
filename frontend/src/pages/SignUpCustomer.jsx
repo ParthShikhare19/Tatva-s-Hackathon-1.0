@@ -5,6 +5,8 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 import { FaUser, FaMapMarkerAlt, FaEnvelope, FaPhone, FaLock } from 'react-icons/fa';
 import '../styles/Auth.css';
 
+const API_BASE_URL = 'http://127.0.0.1:8000';
+
 const SignUpCustomer = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -15,93 +17,132 @@ const SignUpCustomer = () => {
     mobile: '',
     password: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    if (error) setError('');
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate('/dashboard');
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: formData.mobile,
+          name: formData.name,
+          password: formData.password,
+          user_type: 'customer',
+          location: formData.location
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Registration failed');
+      }
+
+      localStorage.setItem('authToken', data.access_token);
+      navigate('/dashboard');
+
+    } catch (error) {
+      setError(error.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="auth-page">
-      <LanguageSwitcher />
-      
-      <div className="auth-container">
-        <button className="back-button" onClick={() => navigate('/')}>
-          ← {t('backToHome')}
-        </button>
-        
+    <div className="auth-container">
+      <div className="auth-card">
         <div className="auth-header">
-          <div className="logo-icon"><FaUser /></div>
-          <h1>{t('customerSignUp')}</h1>
+          <FaUser className="auth-icon" />
+          <h1>{t('signUpAsCustomer')}</h1>
+          <LanguageSwitcher />
         </div>
-        
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <div className="input-icon"><FaUser /></div>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          {error && <div className="error-message">{error}</div>}
+          
+          <div className="input-group">
+            <FaUser className="input-icon" />
             <input
               type="text"
+              name="name"
               placeholder={t('name')}
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={handleChange}
               required
             />
           </div>
-          
-          <div className="form-group">
-            <div className="input-icon"><FaMapMarkerAlt /></div>
+
+          <div className="input-group">
+            <FaMapMarkerAlt className="input-icon" />
             <input
               type="text"
+              name="location"
               placeholder={t('location')}
               value={formData.location}
-              onChange={(e) => setFormData({...formData, location: e.target.value})}
-              required
+              onChange={handleChange}
             />
           </div>
-          
-          <div className="form-group">
-            <div className="input-icon"><FaEnvelope /></div>
+
+          <div className="input-group">
+            <FaEnvelope className="input-icon" />
             <input
               type="email"
+              name="email"
               placeholder={t('email')}
               value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              required
+              onChange={handleChange}
             />
           </div>
-          
-          <div className="form-group">
-            <div className="input-icon"><FaPhone /></div>
+
+          <div className="input-group">
+            <FaPhone className="input-icon" />
             <input
               type="tel"
+              name="mobile"
               placeholder={t('mobile')}
               value={formData.mobile}
-              onChange={(e) => setFormData({...formData, mobile: e.target.value})}
+              onChange={handleChange}
               required
             />
           </div>
-          
-          <div className="form-group">
-            <div className="input-icon"><FaLock /></div>
+
+          <div className="input-group">
+            <FaLock className="input-icon" />
             <input
               type="password"
+              name="password"
               placeholder={t('password')}
               value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              onChange={handleChange}
               required
             />
           </div>
-          
-          <button type="submit" className="submit-button">
-            {t('submit')} →
+
+          <button type="submit" className="auth-button" disabled={loading}>
+            {loading ? t('signingUp') : t('signUp')}
           </button>
         </form>
-        
-        <div className="auth-footer">
-          <p>{t('alreadyHaveAccount')}</p>
-          <button onClick={() => navigate('/signin')} className="link-button">
-            {t('signIn')}
-          </button>
-        </div>
+
+        <p className="auth-link">
+          {t('alreadyHaveAccount')}{' '}
+          <a href="/signin">{t('signIn')}</a>
+        </p>
       </div>
     </div>
   );
