@@ -4,11 +4,9 @@ from dotenv import load_dotenv
 import os
 from pathlib import Path
 
-# Load environment variables from backend/.env
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
-# Get PostgreSQL database URL from environment
 DATABASE_URL = os.getenv('DB_URL')
 
 if not DATABASE_URL:
@@ -21,13 +19,29 @@ engine = create_engine(
     pool_size=5,
     max_overflow=10,
 )
+
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
 
 def get_db():
-    from fastapi import Depends
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+def create_tables():
+    # Import all models to ensure they're registered with SQLAlchemy
+    import sys
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent.parent))
+    
+    from auth.models import User
+    from models.providers import Provider
+    from models.customers import Customer  
+    from models.job_codes import JobCode
+    from models.jobs import Job
+    from models.reviews import Review
+    from models.otp import OTPVerification
+    
+    Base.metadata.create_all(bind=engine)

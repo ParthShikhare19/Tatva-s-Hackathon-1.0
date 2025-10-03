@@ -1,8 +1,13 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from .models import User, Provider
+from .models import User
 from .schemas import UserSignup, UserLogin
 from .security import hash_password, verify_password, create_access_token
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+from models.providers import Provider
+from models.customers import Customer
 
 class AuthService:
     def __init__(self, db: Session):

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, DateTime, Boolean, Integer
 from sqlalchemy.sql import func
-from ..Database_connection.db import Base
+from Database_connection.db import Base
 
 class OTPVerification(Base):
     __tablename__ = "otp_verifications"

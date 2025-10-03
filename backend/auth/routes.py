@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from .database import get_db
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+from Database_connection.db import get_db
 from .schemas import UserSignup, UserLogin, Token, UserInfo
 from .service import AuthService
 from .security import decode_access_token
