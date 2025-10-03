@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes.job_codes import router as job_codes_router
 from .routes.providers import router as providers_router
+from .routes.customers import router as customers_router
 from .Database_connection.db import engine, Base
 from auth import router as auth_router, create_tables
 
@@ -26,6 +27,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(job_codes_router)
 app.include_router(providers_router)
+app.include_router(customers_router)
 
 @app.on_event("startup")
 def startup_event():
