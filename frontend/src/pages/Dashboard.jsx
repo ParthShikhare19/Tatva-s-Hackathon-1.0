@@ -19,6 +19,8 @@ import {
   FaCheck,
   FaTimes,
   FaUser,
+  FaBookmark,
+  FaRegBookmark,
 } from "react-icons/fa";
 import "../styles/Dashboard.css";
 
@@ -93,7 +95,9 @@ function CustomerDashboard({ t }) {
   const [selectedRating, setSelectedRating] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
+  const [showSavedProviders, setShowSavedProviders] = useState(false);
+  const [savedProviders, setSavedProviders] = useState([]);
   const providersPerPage = 6;
 
   // Sample provider data
@@ -215,6 +219,34 @@ function CustomerDashboard({ t }) {
     setCurrentPage(1);
   };
 
+  const handleSaveProvider = (provider) => {
+    const isAlreadySaved = savedProviders.some(p => p.id === provider.id);
+    
+    if (isAlreadySaved) {
+      // Remove from saved
+      setSavedProviders(prev => prev.filter(p => p.id !== provider.id));
+    } else {
+      // Add to saved
+      setSavedProviders(prev => [...prev, provider]);
+    }
+  };
+
+  const isProviderSaved = (providerId) => {
+    return savedProviders.some(p => p.id === providerId);
+  };
+
+  const handleViewSavedProviders = () => {
+    setShowSavedProviders(true);
+  };
+
+  const handleCloseSavedProviders = () => {
+    setShowSavedProviders(false);
+  };
+
+  const handleRemoveSavedProvider = (providerId) => {
+    setSavedProviders(prev => prev.filter(p => p.id !== providerId));
+  };
+
   return (
     <div className="dashboard-content">
       {/* Stats Cards - Now on Top */}
@@ -233,11 +265,15 @@ function CustomerDashboard({ t }) {
             <p className="stat-number">0</p>
           </div>
         </div>
-        <div className="stat-card">
-          <FaHeart className="stat-icon" />
+        <div 
+          className="stat-card stat-clickable"
+          onClick={handleViewSavedProviders}
+          title="Click to view saved providers"
+        >
+          <FaBookmark className="stat-icon" />
           <div className="stat-info">
             <h4>{t("savedProviders")}</h4>
-            <p className="stat-number">0</p>
+            <p className="stat-number">{savedProviders.length}</p>
           </div>
         </div>
       </div>
@@ -364,8 +400,12 @@ function CustomerDashboard({ t }) {
                   </div>
                   <div className="provider-actions">
                     <button className="book-btn">Book Now</button>
-                    <button className="save-btn">
-                      <FaHeart />
+                    <button 
+                      className={`save-btn ${isProviderSaved(provider.id) ? 'saved' : ''}`}
+                      onClick={() => handleSaveProvider(provider)}
+                      title={isProviderSaved(provider.id) ? "Remove from saved" : "Save provider"}
+                    >
+                      {isProviderSaved(provider.id) ? <FaBookmark /> : <FaRegBookmark />}
                     </button>
                   </div>
                 </div>
@@ -413,6 +453,66 @@ function CustomerDashboard({ t }) {
           </div>
         )}
       </section>
+
+      {/* Saved Providers Modal */}
+      {showSavedProviders && (
+        <div className="modal-overlay" onClick={handleCloseSavedProviders}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Saved Providers</h3>
+              <button className="modal-close-btn" onClick={handleCloseSavedProviders}>
+                <FaTimes />
+              </button>
+            </div>
+            <div className="modal-body">
+              {savedProviders.length > 0 ? (
+                <div className="saved-providers-list">
+                  {savedProviders.map((provider) => (
+                    <div key={provider.id} className="saved-provider-card">
+                      <div className="provider-header">
+                        <FaUserCircle className="provider-avatar" />
+                        <div className="provider-info">
+                          <h4 className="provider-name">{provider.name}</h4>
+                          <div className="provider-rating">
+                            <FaStar className="star-icon" />
+                            <span className="rating-value">{provider.rating}</span>
+                            <span className="reviews-count">({provider.reviews} reviews)</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="provider-body">
+                        <div className="service-badge">
+                          <FaTools /> {provider.service}
+                        </div>
+                        <p className="provider-description">{provider.description}</p>
+                        <div className="provider-location">
+                          <FaMapMarkerAlt className="location-icon" />
+                          <span>{provider.location}</span>
+                        </div>
+                      </div>
+                      <div className="provider-actions">
+                        <button className="book-btn">Book Now</button>
+                        <button 
+                          className="remove-btn"
+                          onClick={() => handleRemoveSavedProvider(provider.id)}
+                        >
+                          <FaTimes /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <FaBookmark className="empty-icon" />
+                  <p>No saved providers yet</p>
+                  <p className="empty-subtitle">Save providers to easily find them later</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
