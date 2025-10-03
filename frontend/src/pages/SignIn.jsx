@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
-import LanguageSwitcher from '../components/LanguageSwitcher';
 import { FaHandshake, FaEnvelope, FaLock } from 'react-icons/fa';
 import '../styles/Auth.css';
 
@@ -67,8 +66,6 @@ const SignIn = () => {
           </div>
           <h1>{t('signIn')}</h1>
         </div>
-
-        <LanguageSwitcher />
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {error && <div className="error-message">{error}</div>}

@@ -1,5 +1,4 @@
 import { useLanguage } from '../contexts/LanguageContext';
-import LanguageSwitcher from '../components/LanguageSwitcher';
 import { FaRocket } from 'react-icons/fa';
 import '../styles/Dashboard.css';
 
@@ -8,8 +7,6 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-page">
-      <LanguageSwitcher />
-      
       <div className="dashboard-container">
         <h1>{t('dashboard')}</h1>
         <div className="coming-soon">
