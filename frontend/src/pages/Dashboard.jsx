@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import {
   FaUserCircle,
   FaSearch,
@@ -45,10 +46,15 @@ function Dashboard() {
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userType");
-    localStorage.removeItem("userName");
-    navigate("/");
+    // Show confirmation dialog in selected language
+    const confirmed = window.confirm(t("common.confirmLogout"));
+
+    if (confirmed) {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("userType");
+      localStorage.removeItem("userName");
+      navigate("/");
+    }
   };
 
   if (!userType) {
@@ -68,9 +74,12 @@ function Dashboard() {
                 <p className="user-name">{userName}</p>
               </div>
             </div>
-            <button className="logout-btn" onClick={handleLogout}>
-              <FaSignOutAlt /> {t("logout")}
-            </button>
+            <div className="header-actions">
+              <LanguageSwitcher />
+              <button className="logout-btn" onClick={handleLogout}>
+                <FaSignOutAlt /> {t("logout")}
+              </button>
+            </div>
           </div>
         </header>
       )}
@@ -176,7 +185,15 @@ function CustomerDashboard({ t }) {
     },
   ]);
 
-  const categories = ["All", "Plumbing", "Electrical", "Carpentry", "Cleaning", "Painting", "Gardening"];
+  const categories = [
+    "All",
+    "Plumbing",
+    "Electrical",
+    "Carpentry",
+    "Cleaning",
+    "Painting",
+    "Gardening",
+  ];
   const locations = ["All", "Mumbai", "Delhi", "Pune", "Bangalore"];
   const ratings = [
     { label: "All Ratings", value: "all" },
@@ -187,31 +204,37 @@ function CustomerDashboard({ t }) {
 
   // Filter providers based on search and filters
   const filteredProviders = providers.filter((provider) => {
-    const matchesSearch = provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         provider.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         provider.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = selectedCategory === "all" || 
-                           provider.service.toLowerCase() === selectedCategory.toLowerCase();
-    
-    const matchesRating = selectedRating === "all" || 
-                         provider.rating >= parseFloat(selectedRating);
-    
-    const matchesLocation = selectedLocation === "all" || 
-                           provider.location.toLowerCase() === selectedLocation.toLowerCase();
-    
+    const matchesSearch =
+      provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      provider.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      provider.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory =
+      selectedCategory === "all" ||
+      provider.service.toLowerCase() === selectedCategory.toLowerCase();
+
+    const matchesRating =
+      selectedRating === "all" || provider.rating >= parseFloat(selectedRating);
+
+    const matchesLocation =
+      selectedLocation === "all" ||
+      provider.location.toLowerCase() === selectedLocation.toLowerCase();
+
     return matchesSearch && matchesCategory && matchesRating && matchesLocation;
   });
 
   // Pagination
   const indexOfLastProvider = currentPage * providersPerPage;
   const indexOfFirstProvider = indexOfLastProvider - providersPerPage;
-  const currentProviders = filteredProviders.slice(indexOfFirstProvider, indexOfLastProvider);
+  const currentProviders = filteredProviders.slice(
+    indexOfFirstProvider,
+    indexOfLastProvider
+  );
   const totalPages = Math.ceil(filteredProviders.length / providersPerPage);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleCategorySelect = (category) => {
@@ -254,14 +277,14 @@ function CustomerDashboard({ t }) {
         <div className="stat-card">
           <FaCalendarAlt className="stat-icon" />
           <div className="stat-info">
-            <h4>{t("activeBookings")}</h4>
+            <h4>{t("dashboard.customer.activeBookings")}</h4>
             <p className="stat-number">0</p>
           </div>
         </div>
         <div className="stat-card">
           <FaClock className="stat-icon" />
           <div className="stat-info">
-            <h4>{t("bookingHistory")}</h4>
+            <h4>{t("dashboard.customer.bookingHistory")}</h4>
             <p className="stat-number">0</p>
           </div>
         </div>
@@ -283,8 +306,8 @@ function CustomerDashboard({ t }) {
         <div className="search-container">
           <div className="search-bar">
             <FaSearch className="search-icon" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={t("searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => {
@@ -293,7 +316,7 @@ function CustomerDashboard({ t }) {
               }}
             />
           </div>
-          <button 
+          <button
             className="filter-toggle-btn"
             onClick={() => setShowFilters(!showFilters)}
           >
@@ -306,7 +329,11 @@ function CustomerDashboard({ t }) {
           {categories.map((category) => (
             <button
               key={category}
-              className={`category-pill ${selectedCategory === (category === "All" ? "all" : category) ? "active" : ""}`}
+              className={`category-pill ${
+                selectedCategory === (category === "All" ? "all" : category)
+                  ? "active"
+                  : ""
+              }`}
               onClick={() => handleCategorySelect(category)}
             >
               {category}
@@ -319,7 +346,7 @@ function CustomerDashboard({ t }) {
           <div className="advanced-filters">
             <div className="filter-group">
               <label>Rating</label>
-              <select 
+              <select
                 value={selectedRating}
                 onChange={(e) => {
                   setSelectedRating(e.target.value);
@@ -335,7 +362,7 @@ function CustomerDashboard({ t }) {
             </div>
             <div className="filter-group">
               <label>Location</label>
-              <select 
+              <select
                 value={selectedLocation}
                 onChange={(e) => {
                   setSelectedLocation(e.target.value);
@@ -343,13 +370,16 @@ function CustomerDashboard({ t }) {
                 }}
               >
                 {locations.map((location) => (
-                  <option key={location} value={location === "All" ? "all" : location}>
+                  <option
+                    key={location}
+                    value={location === "All" ? "all" : location}
+                  >
                     {location}
                   </option>
                 ))}
               </select>
             </div>
-            <button 
+            <button
               className="clear-filters-btn"
               onClick={() => {
                 setSelectedCategory("all");
@@ -368,8 +398,13 @@ function CustomerDashboard({ t }) {
       {/* Service Providers Section */}
       <section className="providers-section">
         <div className="section-header">
-          <h3>Available Service Providers</h3>
-          <span className="results-count">{filteredProviders.length} providers found</span>
+          <h3>{t("dashboard.customer.nearbyProviders")}</h3>
+          <button className="view-all-btn">{t("common.viewAll")}</button>
+        </div>
+        <div className="empty-state">
+          <FaMapMarkerAlt className="empty-icon" />
+          <p>{t("common.noDataYet")}</p>
+          <button className="get-started-btn">{t("common.getStarted")}</button>
         </div>
 
         {currentProviders.length > 0 ? (
@@ -384,7 +419,9 @@ function CustomerDashboard({ t }) {
                       <div className="provider-rating">
                         <FaStar className="star-icon" />
                         <span className="rating-value">{provider.rating}</span>
-                        <span className="reviews-count">({provider.reviews} reviews)</span>
+                        <span className="reviews-count">
+                          ({provider.reviews} reviews)
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -392,7 +429,9 @@ function CustomerDashboard({ t }) {
                     <div className="service-badge">
                       <FaTools /> {provider.service}
                     </div>
-                    <p className="provider-description">{provider.description}</p>
+                    <p className="provider-description">
+                      {provider.description}
+                    </p>
                     <div className="provider-location">
                       <FaMapMarkerAlt className="location-icon" />
                       <span>{provider.location}</span>
@@ -415,19 +454,21 @@ function CustomerDashboard({ t }) {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="pagination">
-                <button 
+                <button
                   className="pagination-btn"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
                 >
                   Previous
                 </button>
-                
+
                 <div className="pagination-numbers">
                   {[...Array(totalPages)].map((_, index) => (
                     <button
                       key={index + 1}
-                      className={`pagination-number ${currentPage === index + 1 ? 'active' : ''}`}
+                      className={`pagination-number ${
+                        currentPage === index + 1 ? "active" : ""
+                      }`}
                       onClick={() => handlePageChange(index + 1)}
                     >
                       {index + 1}
@@ -435,7 +476,7 @@ function CustomerDashboard({ t }) {
                   ))}
                 </div>
 
-                <button 
+                <button
                   className="pagination-btn"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
@@ -449,7 +490,9 @@ function CustomerDashboard({ t }) {
           <div className="empty-state">
             <FaMapMarkerAlt className="empty-icon" />
             <p>No service providers found</p>
-            <p className="empty-subtitle">Try adjusting your search or filters</p>
+            <p className="empty-subtitle">
+              Try adjusting your search or filters
+            </p>
           </div>
         )}
       </section>
@@ -519,10 +562,8 @@ function CustomerDashboard({ t }) {
 
 // Provider Dashboard Component
 function ProviderDashboard({ t, userName, handleLogout }) {
-  const [oneTimeCode, setOneTimeCode] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(null);
   const [showAcceptedJobs, setShowAcceptedJobs] = useState(false);
-  
+
   // New requests waiting for accept/reject
   const [workRequests, setWorkRequests] = useState([
     {
@@ -557,6 +598,7 @@ function ProviderDashboard({ t, userName, handleLogout }) {
       service: "Plumbing",
       description: "Bathroom pipe leakage",
       acceptedDate: "2025-10-01",
+      oneTimeCode: 123456,
     },
     {
       id: 102,
@@ -565,73 +607,54 @@ function ProviderDashboard({ t, userName, handleLogout }) {
       service: "Electrical",
       description: "AC installation required",
       acceptedDate: "2025-10-02",
+      oneTimeCode: 789012,
     },
   ]);
 
-  const handleGenerateCode = () => {
-    // Generate a random 6-digit code for now
-    const code = Math.floor(100000 + Math.random() * 900000);
-    setOneTimeCode(code);
-    // Set timer for 5 minutes (300 seconds)
-    setTimeLeft(300);
-    // TODO: Send this code to backend
-  };
-
-  // Timer countdown effect
-  useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0) {
-      if (timeLeft === 0) {
-        setOneTimeCode(null);
-        setTimeLeft(null);
-      }
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          setOneTimeCode(null);
-          return null;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft]);
-
-  // Format time as MM:SS
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  // Generate a unique 6-digit code
+  const generateUniqueCode = () => {
+    return Math.floor(100000 + Math.random() * 900000);
   };
 
   const handleAcceptRequest = (request) => {
-    // Move from workRequests to acceptedJobs
+    // Generate a unique code for this request
+    const code = generateUniqueCode();
+
+    // Move from workRequests to acceptedJobs with code
     setAcceptedJobs((prev) => [
       ...prev,
       {
         ...request,
         id: Date.now(), // Generate new ID for accepted job
-        acceptedDate: new Date().toISOString().split('T')[0],
+        acceptedDate: new Date().toISOString().split("T")[0],
+        oneTimeCode: code,
       },
     ]);
     setWorkRequests((prev) => prev.filter((req) => req.id !== request.id));
     // TODO: Send accept request to backend
-    console.log("Accepted request:", request.id);
+    console.log("Accepted request:", request.id, "Code:", code);
   };
 
   const handleRejectRequest = (requestId) => {
-    setWorkRequests((prev) => prev.filter((req) => req.id !== requestId));
-    // TODO: Send reject request to backend
-    console.log("Rejected request:", requestId);
+    // Show confirmation dialog in selected language
+    const confirmed = window.confirm(t("common.confirmRejectRequest"));
+
+    if (confirmed) {
+      setWorkRequests((prev) => prev.filter((req) => req.id !== requestId));
+      // TODO: Send reject request to backend
+      console.log("Rejected request:", requestId);
+    }
   };
 
-  const handleCompleteJob = (jobId) => {
-    setAcceptedJobs((prev) => prev.filter((job) => job.id !== jobId));
-    // TODO: Send complete job request to backend
-    console.log("Completed job:", jobId);
+  const handleCancelJob = (jobId) => {
+    // Show confirmation dialog in selected language
+    const confirmed = window.confirm(t("common.confirmCancelJob"));
+
+    if (confirmed) {
+      setAcceptedJobs((prev) => prev.filter((job) => job.id !== jobId));
+      // TODO: Send cancel job request to backend
+      console.log("Cancelled job:", jobId);
+    }
   };
 
   const handleViewAcceptedJobs = () => {
@@ -654,16 +677,21 @@ function ProviderDashboard({ t, userName, handleLogout }) {
               <p className="user-name">{userName}</p>
             </div>
           </div>
-          <button className="logout-btn" onClick={handleLogout}>
-            <FaSignOutAlt /> {t("logout")}
-          </button>
+          <div className="header-actions">
+            <LanguageSwitcher />
+            <button className="logout-btn" onClick={handleLogout}>
+              <FaSignOutAlt /> {t("logout")}
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="dashboard-content">
         {/* Welcome Message */}
         <section className="welcome-section">
-          <h3>Welcome {userName}</h3>
+          <h3>
+            {t("common.welcome")} {userName}
+          </h3>
         </section>
 
         {/* Stats Cards */}
@@ -671,58 +699,39 @@ function ProviderDashboard({ t, userName, handleLogout }) {
           <div className="stat-card">
             <FaStar className="stat-icon" />
             <div className="stat-info">
-              <h4>{t("averageRating")}</h4>
+              <h4>{t("dashboard.provider.avgRating")}</h4>
               <p className="stat-number">0.0</p>
             </div>
           </div>
           <div className="stat-card">
             <FaCheckCircle className="stat-icon" />
             <div className="stat-info">
-              <h4>Customers Served</h4>
+              <h4>{t("dashboard.provider.customersServed")}</h4>
               <p className="stat-number">0</p>
             </div>
           </div>
-          <div 
-            className="stat-card stat-clickable" 
+          <div
+            className="stat-card stat-clickable"
             onClick={handleViewAcceptedJobs}
-            title="Click to view accepted jobs"
+            title={t("common.clickToView")}
           >
             <FaClipboardList className="stat-icon" />
             <div className="stat-info">
-              <h4>Accepted Jobs (Pending Completion)</h4>
+              <h4>{t("dashboard.provider.acceptedJobs")}</h4>
               <p className="stat-number">{acceptedJobs.length}</p>
             </div>
           </div>
         </div>
 
-        {/* Generate One-Time Code Button */}
-        <section className="code-generation-section">
-          <button className="generate-code-btn" onClick={handleGenerateCode}>
-            <FaPlus /> Generate One-Time Code
-          </button>
-          {oneTimeCode && (
-            <div className="code-display">
-              <p>Your One-Time Code:</p>
-              <h2 className="code-value">{oneTimeCode}</h2>
-              {timeLeft && (
-                <div className="code-timer">
-                  <FaClock className="timer-icon" />
-                  <p className="timer-text">
-                    Expires in: <span className="timer-value">{formatTime(timeLeft)}</span>
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
         {/* Work Requests Section */}
         <section className="work-requests-section">
           <div className="section-header">
-            <h3>Work Requests from Customers</h3>
-            <span className="requests-count">{workRequests.length} pending</span>
+            <h3>{t("dashboard.provider.workRequests")}</h3>
+            <span className="requests-count">
+              {workRequests.length} {t("common.pending")}
+            </span>
           </div>
-          
+
           {workRequests.length > 0 ? (
             <div className="requests-grid">
               {workRequests.map((request) => (
@@ -731,7 +740,9 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                     <div className="customer-info">
                       <FaUser className="customer-icon" />
                       <div>
-                        <h4 className="customer-name">{request.customerName}</h4>
+                        <h4 className="customer-name">
+                          {request.customerName}
+                        </h4>
                         <p className="customer-location">
                           <FaMapMarkerAlt className="location-icon" />
                           {request.location}
@@ -750,13 +761,13 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                       className="accept-btn"
                       onClick={() => handleAcceptRequest(request)}
                     >
-                      <FaCheck /> Accept
+                      <FaCheck /> {t("common.accept")}
                     </button>
                     <button
                       className="reject-btn"
                       onClick={() => handleRejectRequest(request.id)}
                     >
-                      <FaTimes /> Reject
+                      <FaTimes /> {t("common.reject")}
                     </button>
                   </div>
                 </div>
@@ -765,8 +776,10 @@ function ProviderDashboard({ t, userName, handleLogout }) {
           ) : (
             <div className="empty-state">
               <FaClipboardList className="empty-icon" />
-              <p>No pending work requests</p>
-              <p className="empty-subtitle">New requests will appear here</p>
+              <p>{t("dashboard.provider.noPendingRequests")}</p>
+              <p className="empty-subtitle">
+                {t("dashboard.provider.newRequestsAppear")}
+              </p>
             </div>
           )}
         </section>
@@ -776,8 +789,11 @@ function ProviderDashboard({ t, userName, handleLogout }) {
           <div className="modal-overlay" onClick={handleCloseAcceptedJobs}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3>Accepted Jobs (Pending Completion)</h3>
-                <button className="modal-close-btn" onClick={handleCloseAcceptedJobs}>
+                <h3>{t("dashboard.provider.acceptedJobs")}</h3>
+                <button
+                  className="modal-close-btn"
+                  onClick={handleCloseAcceptedJobs}
+                >
                   <FaTimes />
                 </button>
               </div>
@@ -790,7 +806,9 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                           <div className="customer-info">
                             <FaUser className="customer-icon" />
                             <div>
-                              <h4 className="customer-name">{job.customerName}</h4>
+                              <h4 className="customer-name">
+                                {job.customerName}
+                              </h4>
                               <p className="customer-location">
                                 <FaMapMarkerAlt className="location-icon" />
                                 {job.location}
@@ -799,7 +817,9 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                           </div>
                           <div className="accepted-date">
                             <FaCalendarAlt className="date-icon" />
-                            <span>Accepted: {job.acceptedDate}</span>
+                            <span>
+                              {t("common.accepted")}: {job.acceptedDate}
+                            </span>
                           </div>
                         </div>
                         <div className="job-body">
@@ -807,13 +827,30 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                             <FaTools /> {job.service}
                           </div>
                           <p className="job-description">{job.description}</p>
+
+                          {/* Display One-Time Code */}
+                          {job.oneTimeCode && (
+                            <div className="job-code-display">
+                              <div className="code-label">
+                                <FaClipboardList className="code-icon" />
+                                <span>
+                                  {t("dashboard.provider.yourOneTimeCode")}
+                                </span>
+                              </div>
+                              <div className="code-value-container">
+                                <h3 className="code-value">
+                                  {job.oneTimeCode}
+                                </h3>
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div className="job-actions">
                           <button
-                            className="complete-btn"
-                            onClick={() => handleCompleteJob(job.id)}
+                            className="cancel-btn"
+                            onClick={() => handleCancelJob(job.id)}
                           >
-                            <FaCheckCircle /> Mark as Completed
+                            <FaTimes /> {t("dashboard.provider.cancelRequest")}
                           </button>
                         </div>
                       </div>
@@ -822,8 +859,10 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                 ) : (
                   <div className="empty-state">
                     <FaCheckCircle className="empty-icon" />
-                    <p>No accepted jobs pending completion</p>
-                    <p className="empty-subtitle">Jobs you accept will appear here</p>
+                    <p>{t("dashboard.provider.noAcceptedJobs")}</p>
+                    <p className="empty-subtitle">
+                      {t("dashboard.provider.jobsYouAccept")}
+                    </p>
                   </div>
                 )}
               </div>

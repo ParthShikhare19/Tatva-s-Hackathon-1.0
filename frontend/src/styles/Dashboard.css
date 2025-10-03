@@ -70,6 +70,55 @@
   font-weight: 600;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Language Switcher in Dashboard Header */
+.dashboard-header .language-switcher {
+  position: static;
+  z-index: auto;
+}
+
+.dashboard-header .language-dropdown-wrapper {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+}
+
+.dashboard-header .language-dropdown-wrapper:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.dashboard-header .language-icon {
+  color: white;
+  font-size: 1.2rem;
+  margin-right: 0.5rem;
+}
+
+.dashboard-header .language-dropdown {
+  color: white;
+  font-size: 1rem;
+  min-width: 80px;
+  font-weight: 500;
+  padding-right: 20px;
+}
+
+.dashboard-header .language-dropdown-wrapper::after {
+  color: white;
+  right: 1rem;
+}
+
+.dashboard-header .language-dropdown option {
+  color: #1976d2;
+  background: white;
+}
+
 .logout-btn {
   display: flex;
   align-items: center;
@@ -190,7 +239,11 @@
 }
 
 .stat-clickable:hover {
-  background: linear-gradient(135deg, rgba(33, 150, 243, 0.08), rgba(255, 255, 255, 0.95));
+  background: linear-gradient(
+    135deg,
+    rgba(33, 150, 243, 0.08),
+    rgba(255, 255, 255, 0.95)
+  );
   border-color: #2196f3;
   box-shadow: 0 8px 30px rgba(33, 150, 243, 0.3);
 }
@@ -464,6 +517,26 @@ section {
     text-align: center;
   }
 
+  .header-actions {
+    flex-direction: row;
+    gap: 0.75rem;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dashboard-header .language-dropdown-wrapper {
+    padding: 0.6rem 0.8rem;
+  }
+
+  .dashboard-header .language-dropdown {
+    font-size: 0.9rem;
+    min-width: 70px;
+  }
+
+  .dashboard-header .language-icon {
+    font-size: 1rem;
+  }
+
   .user-info {
     flex-direction: column;
     gap: 0.5rem;
@@ -628,6 +701,30 @@ section {
   .logout-btn {
     padding: 0.6rem 1rem;
     font-size: 0.9rem;
+  }
+
+  .header-actions {
+    gap: 0.5rem;
+  }
+
+  .dashboard-header .language-dropdown-wrapper {
+    padding: 0.55rem 0.7rem;
+  }
+
+  .dashboard-header .language-dropdown {
+    font-size: 0.85rem;
+    min-width: 60px;
+    padding-right: 18px;
+  }
+
+  .dashboard-header .language-icon {
+    font-size: 0.9rem;
+    margin-right: 0.3rem;
+  }
+
+  .dashboard-header .language-dropdown-wrapper::after {
+    right: 0.7rem;
+    font-size: 10px;
   }
 
   .search-bar input {
@@ -859,7 +956,11 @@ section {
 .code-timer {
   margin-top: 1.5rem;
   padding: 1rem;
-  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(255, 193, 7, 0.05));
+  background: linear-gradient(
+    135deg,
+    rgba(255, 152, 0, 0.1),
+    rgba(255, 193, 7, 0.05)
+  );
   border: 2px solid rgba(255, 152, 0, 0.3);
   border-radius: 10px;
   display: flex;
@@ -875,7 +976,8 @@ section {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
@@ -902,7 +1004,11 @@ section {
 
 /* Work Requests Section */
 .work-requests-section {
-  background: linear-gradient(135deg, rgba(33, 150, 243, 0.03), rgba(255, 255, 255, 0.9));
+  background: linear-gradient(
+    135deg,
+    rgba(33, 150, 243, 0.03),
+    rgba(255, 255, 255, 0.9)
+  );
   border: 2px solid rgba(33, 150, 243, 0.2);
 }
 
@@ -956,7 +1062,11 @@ section {
 .customer-icon {
   font-size: 2.5rem;
   color: #2196f3;
-  background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(33, 150, 243, 0.05));
+  background: linear-gradient(
+    135deg,
+    rgba(33, 150, 243, 0.1),
+    rgba(33, 150, 243, 0.05)
+  );
   padding: 0.75rem;
   border-radius: 50%;
 }
@@ -990,7 +1100,11 @@ section {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(76, 175, 80, 0.05));
+  background: linear-gradient(
+    135deg,
+    rgba(76, 175, 80, 0.15),
+    rgba(76, 175, 80, 0.05)
+  );
   color: #4caf50;
   padding: 0.5rem 1rem;
   border-radius: 20px;
@@ -1145,7 +1259,11 @@ section {
 }
 
 .accepted-job-card {
-  background: linear-gradient(135deg, rgba(33, 150, 243, 0.03), rgba(255, 255, 255, 0.95));
+  background: linear-gradient(
+    135deg,
+    rgba(33, 150, 243, 0.03),
+    rgba(255, 255, 255, 0.95)
+  );
   border: 2px solid rgba(33, 150, 243, 0.2);
   border-radius: 15px;
   padding: 1.5rem;
@@ -1171,7 +1289,11 @@ section {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(33, 150, 243, 0.05));
+  background: linear-gradient(
+    135deg,
+    rgba(33, 150, 243, 0.1),
+    rgba(33, 150, 243, 0.05)
+  );
   padding: 0.5rem 1rem;
   border-radius: 10px;
   font-size: 0.85rem;
@@ -1194,9 +1316,91 @@ section {
   line-height: 1.5;
 }
 
+/* Job Code Display in Accepted Jobs */
+.job-code-display {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: linear-gradient(
+    135deg,
+    rgba(76, 175, 80, 0.08),
+    rgba(255, 255, 255, 0.95)
+  );
+  border: 2px solid rgba(76, 175, 80, 0.3);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.job-code-display:hover {
+  border-color: #4caf50;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.15);
+}
+
+.code-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  color: #2e7d32;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.code-label .code-icon {
+  color: #4caf50;
+  font-size: 1.1rem;
+}
+
+.code-value-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.code-value-container .code-value {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1976d2;
+  letter-spacing: 0.15em;
+  font-family: "Courier New", monospace;
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .job-actions {
   display: flex;
   gap: 0.75rem;
+}
+
+.cancel-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.5rem;
+  background: linear-gradient(135deg, #f44336, #d32f2f);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(244, 67, 54, 0.3);
+}
+
+.cancel-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4);
+  background: linear-gradient(135deg, #d32f2f, #c62828);
+}
+
+.cancel-btn:active {
+  transform: translateY(0);
 }
 
 .complete-btn {
@@ -1244,6 +1448,31 @@ section {
     padding: 0.5rem 0.8rem;
     font-size: 0.85rem;
     gap: 0.3rem;
+  }
+
+  .header-actions {
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-header .language-dropdown-wrapper {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .dashboard-header .language-dropdown {
+    font-size: 0.8rem;
+    min-width: 55px;
+    padding-right: 16px;
+  }
+
+  .dashboard-header .language-icon {
+    font-size: 0.85rem;
+    margin-right: 0.25rem;
+  }
+
+  .dashboard-header .language-dropdown-wrapper::after {
+    right: 0.6rem;
+    font-size: 9px;
   }
 
   section {
@@ -1448,7 +1677,7 @@ section {
 
 .filter-toggle-btn {
   padding: 1rem 2rem;
-  background: linear-gradient(135deg, #2196F3, #1976D2);
+  background: linear-gradient(135deg, #2196f3, #1976d2);
   color: white;
   border: none;
   border-radius: 12px;
@@ -1494,7 +1723,7 @@ section {
 }
 
 .category-pill.active {
-  background: linear-gradient(135deg, #2196F3, #1976D2);
+  background: linear-gradient(135deg, #2196f3, #1976d2);
   color: white;
   border-color: transparent;
 }
@@ -1544,7 +1773,7 @@ section {
 
 .filter-group select:focus {
   outline: none;
-  border-color: #2196F3;
+  border-color: #2196f3;
   box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
 }
 
@@ -1609,7 +1838,7 @@ section {
 
 .provider-avatar {
   font-size: 3.5rem;
-  color: #2196F3;
+  color: #2196f3;
   flex-shrink: 0;
 }
 
@@ -1631,7 +1860,7 @@ section {
 }
 
 .star-icon {
-  color: #FFC107;
+  color: #ffc107;
   font-size: 1rem;
 }
 
@@ -1655,7 +1884,7 @@ section {
   align-items: center;
   gap: 0.5rem;
   background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-  color: #1976D2;
+  color: #1976d2;
   padding: 0.4rem 1rem;
   border-radius: 50px;
   font-size: 0.85rem;
@@ -1680,7 +1909,7 @@ section {
 }
 
 .location-icon {
-  color: #2196F3;
+  color: #2196f3;
 }
 
 .provider-actions {
@@ -1693,7 +1922,7 @@ section {
 .book-btn {
   flex: 1;
   padding: 0.75rem;
-  background: linear-gradient(135deg, #2196F3, #1976D2);
+  background: linear-gradient(135deg, #2196f3, #1976d2);
   color: white;
   border: none;
   border-radius: 8px;
@@ -1748,7 +1977,7 @@ section {
   background: white;
   border: 2px solid #e3f2fd;
   border-radius: 8px;
-  color: #2196F3;
+  color: #2196f3;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1776,20 +2005,25 @@ section {
   background: white;
   border: 2px solid #e3f2fd;
   border-radius: 8px;
-  color: #2196F3;
+  color: #2196f3;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .pagination-number:hover {
+<<<<<<< HEAD
   background: #bbdefb;
   border-color: #2196F3;
   color: #0d47a1;
+=======
+  background: #e3f2fd;
+  border-color: #2196f3;
+>>>>>>> c44c5dd20d1d4c3e6cb4e6a10249bd6dc3df8914
 }
 
 .pagination-number.active {
-  background: linear-gradient(135deg, #2196F3, #1976D2);
+  background: linear-gradient(135deg, #2196f3, #1976d2);
   color: white;
   border-color: transparent;
 }

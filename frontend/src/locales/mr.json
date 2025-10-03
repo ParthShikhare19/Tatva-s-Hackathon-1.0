@@ -1,0 +1,66 @@
+{
+  "common": {
+    "welcome": "स्वागत आहे",
+    "logout": "लॉग आउट",
+    "profile": "प्रोफाइल",
+    "search": "शोधा",
+    "filter": "फिल्टर",
+    "accept": "स्वीकारा",
+    "reject": "नाकारा",
+    "close": "बंद करा",
+    "viewAll": "सर्व पहा",
+    "viewDetails": "तपशील पहा",
+    "clickToView": "स्वीकारलेली कामे पाहण्यासाठी क्लिक करा",
+    "getStarted": "सुरू करा",
+    "pending": "प्रलंबित",
+    "accepted": "स्वीकृत",
+    "noDataYet": "अद्याप डेटा नाही",
+    "confirmLogout": "तुम्हाला खात्री आहे की तुम्ही लॉग आउट करू इच्छिता?",
+    "confirmCancelJob": "तुम्हाला खात्री आहे की तुम्ही हे स्वीकृत काम रद्द करू इच्छिता?",
+    "confirmRejectRequest": "तुम्हाला खात्री आहे की तुम्ही ही ग्राहक विनंती नाकारू इच्छिता?"
+  },
+  "dashboard": {
+    "welcomeBack": "परत स्वागत आहे",
+    "customer": {
+      "findServices": "सेवा शोधा",
+      "searchPlaceholder": "सेवा शोधा...",
+      "activeBookings": "सक्रिय बुकिंग",
+      "bookingHistory": "बुकिंग इतिहास",
+      "savedProviders": "जतन केलेले प्रदाते",
+      "browseCategories": "श्रेणी पहा",
+      "nearbyProviders": "जवळचे सेवा प्रदाते",
+      "noDataYet": "अद्याप डेटा नाही",
+      "noProvidersFound": "प्रदाते सापडले नाहीत"
+    },
+    "provider": {
+      "avgRating": "सरासरी रेटिंग",
+      "customersServed": "सेवा दिलेले ग्राहक",
+      "acceptedJobs": "स्वीकृत कामे (पूर्ण होणे बाकी)",
+      "generateCode": "वन-टाइम कोड तयार करा",
+      "yourOneTimeCode": "तुमचा वन-टाइम कोड:",
+      "codeExpires": "संपेल:",
+      "codeExpired": "कोड संपला",
+      "workRequests": "ग्राहकांकडून कामाच्या विनंत्या",
+      "myServices": "माझ्या सेवा",
+      "addService": "सेवा जोडा",
+      "customer": "ग्राहक",
+      "location": "स्थान",
+      "service": "सेवा",
+      "description": "वर्णन",
+      "markAsCompleted": "पूर्ण म्हणून चिन्हांकित करा",
+      "cancelRequest": "विनंती रद्द करा",
+      "noPendingRequests": "प्रलंबित कामाच्या विनंत्या नाहीत",
+      "newRequestsAppear": "नवीन विनंत्या येथे दिसतील",
+      "noAcceptedJobs": "पूर्ण होण्यासाठी प्रलंबित स्वीकृत कामे नाहीत",
+      "jobsYouAccept": "तुम्ही स्वीकारलेली कामे येथे दिसतील"
+    }
+  },
+  "categories": {
+    "plumbing": "प्लंबिंग",
+    "electrical": "विद्युत",
+    "carpentry": "सुतारकाम",
+    "cleaning": "साफसफाई",
+    "painting": "रंगकाम",
+    "gardening": "बागकाम"
+  }
+}
