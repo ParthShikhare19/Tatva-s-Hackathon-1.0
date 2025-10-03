@@ -88,18 +88,136 @@ function Dashboard() {
 
 // Customer Dashboard Component
 function CustomerDashboard({ t }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedRating, setSelectedRating] = useState("all");
+  const [selectedLocation, setSelectedLocation] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
+  const providersPerPage = 6;
+
+  // Sample provider data
+  const [providers, setProviders] = useState([
+    {
+      id: 1,
+      name: "Rajesh Kumar",
+      service: "Plumbing",
+      description: "Expert in all plumbing works with 10+ years experience",
+      rating: 4.5,
+      location: "Mumbai",
+      reviews: 45,
+    },
+    {
+      id: 2,
+      name: "Amit Sharma",
+      service: "Electrical",
+      description: "Licensed electrician specializing in home wiring",
+      rating: 4.8,
+      location: "Delhi",
+      reviews: 62,
+    },
+    {
+      id: 3,
+      name: "Priya Patel",
+      service: "Cleaning",
+      description: "Professional cleaning services for homes and offices",
+      rating: 4.6,
+      location: "Pune",
+      reviews: 38,
+    },
+    {
+      id: 4,
+      name: "Suresh Reddy",
+      service: "Carpentry",
+      description: "Custom furniture and woodwork specialist",
+      rating: 4.7,
+      location: "Bangalore",
+      reviews: 51,
+    },
+    {
+      id: 5,
+      name: "Neha Singh",
+      service: "Painting",
+      description: "Interior and exterior painting with quality finish",
+      rating: 4.4,
+      location: "Mumbai",
+      reviews: 29,
+    },
+    {
+      id: 6,
+      name: "Vikram Joshi",
+      service: "Gardening",
+      description: "Landscaping and garden maintenance expert",
+      rating: 4.9,
+      location: "Pune",
+      reviews: 73,
+    },
+    {
+      id: 7,
+      name: "Anita Desai",
+      service: "Plumbing",
+      description: "Quick and reliable plumbing repairs",
+      rating: 4.3,
+      location: "Delhi",
+      reviews: 34,
+    },
+    {
+      id: 8,
+      name: "Rahul Mehta",
+      service: "Electrical",
+      description: "24/7 emergency electrical services",
+      rating: 4.6,
+      location: "Bangalore",
+      reviews: 48,
+    },
+  ]);
+
+  const categories = ["All", "Plumbing", "Electrical", "Carpentry", "Cleaning", "Painting", "Gardening"];
+  const locations = ["All", "Mumbai", "Delhi", "Pune", "Bangalore"];
+  const ratings = [
+    { label: "All Ratings", value: "all" },
+    { label: "4.5+ Stars", value: "4.5" },
+    { label: "4.0+ Stars", value: "4.0" },
+    { label: "3.5+ Stars", value: "3.5" },
+  ];
+
+  // Filter providers based on search and filters
+  const filteredProviders = providers.filter((provider) => {
+    const matchesSearch = provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         provider.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         provider.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = selectedCategory === "all" || 
+                           provider.service.toLowerCase() === selectedCategory.toLowerCase();
+    
+    const matchesRating = selectedRating === "all" || 
+                         provider.rating >= parseFloat(selectedRating);
+    
+    const matchesLocation = selectedLocation === "all" || 
+                           provider.location.toLowerCase() === selectedLocation.toLowerCase();
+    
+    return matchesSearch && matchesCategory && matchesRating && matchesLocation;
+  });
+
+  // Pagination
+  const indexOfLastProvider = currentPage * providersPerPage;
+  const indexOfFirstProvider = indexOfLastProvider - providersPerPage;
+  const currentProviders = filteredProviders.slice(indexOfFirstProvider, indexOfLastProvider);
+  const totalPages = Math.ceil(filteredProviders.length / providersPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(category === "All" ? "all" : category);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="dashboard-content">
-      {/* Search Section */}
-      <section className="search-section">
-        <h3>{t("findServices")}</h3>
-        <div className="search-bar">
-          <FaSearch className="search-icon" />
-          <input type="text" placeholder={t("searchPlaceholder")} />
-        </div>
-      </section>
-
-      {/* Stats Cards */}
+      {/* Stats Cards - Now on Top */}
       <div className="stats-grid">
         <div className="stat-card">
           <FaCalendarAlt className="stat-icon" />
@@ -124,33 +242,176 @@ function CustomerDashboard({ t }) {
         </div>
       </div>
 
-      {/* Categories Section */}
-      <section className="categories-section">
-        <div className="section-header">
-          <h3>{t("browseCategories")}</h3>
-          <button className="view-all-btn">{t("viewAll")}</button>
+      {/* Combined Search and Filters Section */}
+      <section className="search-filter-section">
+        <div className="search-container">
+          <div className="search-bar">
+            <FaSearch className="search-icon" />
+            <input 
+              type="text" 
+              placeholder={t("searchPlaceholder")}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+          <button 
+            className="filter-toggle-btn"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <FaTools /> Filters
+          </button>
         </div>
-        <div className="categories-grid">
-          <CategoryCard icon={<FaTools />} title="Plumbing" />
-          <CategoryCard icon={<FaTools />} title="Electrical" />
-          <CategoryCard icon={<FaTools />} title="Carpentry" />
-          <CategoryCard icon={<FaTools />} title="Cleaning" />
-          <CategoryCard icon={<FaTools />} title="Painting" />
-          <CategoryCard icon={<FaTools />} title="Gardening" />
+
+        {/* Category Filter Pills */}
+        <div className="category-pills">
+          {categories.map((category) => (
+            <button
+              key={category}
+              className={`category-pill ${selectedCategory === (category === "All" ? "all" : category) ? "active" : ""}`}
+              onClick={() => handleCategorySelect(category)}
+            >
+              {category}
+            </button>
+          ))}
         </div>
+
+        {/* Advanced Filters - Collapsible */}
+        {showFilters && (
+          <div className="advanced-filters">
+            <div className="filter-group">
+              <label>Rating</label>
+              <select 
+                value={selectedRating}
+                onChange={(e) => {
+                  setSelectedRating(e.target.value);
+                  setCurrentPage(1);
+                }}
+              >
+                {ratings.map((rating) => (
+                  <option key={rating.value} value={rating.value}>
+                    {rating.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-group">
+              <label>Location</label>
+              <select 
+                value={selectedLocation}
+                onChange={(e) => {
+                  setSelectedLocation(e.target.value);
+                  setCurrentPage(1);
+                }}
+              >
+                {locations.map((location) => (
+                  <option key={location} value={location === "All" ? "all" : location}>
+                    {location}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button 
+              className="clear-filters-btn"
+              onClick={() => {
+                setSelectedCategory("all");
+                setSelectedRating("all");
+                setSelectedLocation("all");
+                setSearchQuery("");
+                setCurrentPage(1);
+              }}
+            >
+              Clear All Filters
+            </button>
+          </div>
+        )}
       </section>
 
-      {/* Nearby Providers */}
+      {/* Service Providers Section */}
       <section className="providers-section">
         <div className="section-header">
-          <h3>{t("nearbyProviders")}</h3>
-          <button className="view-all-btn">{t("viewAll")}</button>
+          <h3>Available Service Providers</h3>
+          <span className="results-count">{filteredProviders.length} providers found</span>
         </div>
-        <div className="empty-state">
-          <FaMapMarkerAlt className="empty-icon" />
-          <p>{t("noDataYet")}</p>
-          <button className="get-started-btn">{t("getStarted")}</button>
-        </div>
+
+        {currentProviders.length > 0 ? (
+          <>
+            <div className="providers-grid">
+              {currentProviders.map((provider) => (
+                <div key={provider.id} className="provider-card">
+                  <div className="provider-header">
+                    <FaUserCircle className="provider-avatar" />
+                    <div className="provider-info">
+                      <h4 className="provider-name">{provider.name}</h4>
+                      <div className="provider-rating">
+                        <FaStar className="star-icon" />
+                        <span className="rating-value">{provider.rating}</span>
+                        <span className="reviews-count">({provider.reviews} reviews)</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="provider-body">
+                    <div className="service-badge">
+                      <FaTools /> {provider.service}
+                    </div>
+                    <p className="provider-description">{provider.description}</p>
+                    <div className="provider-location">
+                      <FaMapMarkerAlt className="location-icon" />
+                      <span>{provider.location}</span>
+                    </div>
+                  </div>
+                  <div className="provider-actions">
+                    <button className="book-btn">Book Now</button>
+                    <button className="save-btn">
+                      <FaHeart />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button 
+                  className="pagination-btn"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </button>
+                
+                <div className="pagination-numbers">
+                  {[...Array(totalPages)].map((_, index) => (
+                    <button
+                      key={index + 1}
+                      className={`pagination-number ${currentPage === index + 1 ? 'active' : ''}`}
+                      onClick={() => handlePageChange(index + 1)}
+                    >
+                      {index + 1}
+                    </button>
+                  ))}
+                </div>
+
+                <button 
+                  className="pagination-btn"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="empty-state">
+            <FaMapMarkerAlt className="empty-icon" />
+            <p>No service providers found</p>
+            <p className="empty-subtitle">Try adjusting your search or filters</p>
+          </div>
+        )}
       </section>
     </div>
   );
