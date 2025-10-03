@@ -1,0 +1,63 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "logout": "Logout",
+    "profile": "Profile",
+    "search": "Search",
+    "filter": "Filter",
+    "accept": "Accept",
+    "reject": "Reject",
+    "close": "Close",
+    "viewAll": "View All",
+    "viewDetails": "View Details",
+    "clickToView": "Click to view accepted jobs",
+    "getStarted": "Get Started",
+    "pending": "pending",
+    "accepted": "Accepted",
+    "noDataYet": "No data yet"
+  },
+  "dashboard": {
+    "welcomeBack": "Welcome Back",
+    "customer": {
+      "findServices": "Find Services",
+      "searchPlaceholder": "Search for services...",
+      "activeBookings": "Active Bookings",
+      "bookingHistory": "Booking History",
+      "savedProviders": "Saved Providers",
+      "browseCategories": "Browse Categories",
+      "nearbyProviders": "Nearby Providers",
+      "noDataYet": "No data yet",
+      "noProvidersFound": "No providers found"
+    },
+    "provider": {
+      "avgRating": "Average Rating",
+      "customersServed": "Customers Served",
+      "acceptedJobs": "Accepted Jobs (Pending Completion)",
+      "generateCode": "Generate One-Time Code",
+      "yourOneTimeCode": "Your One-Time Code:",
+      "codeExpires": "Expires in:",
+      "codeExpired": "Code Expired",
+      "workRequests": "Work Requests from Customers",
+      "myServices": "My Services",
+      "addService": "Add Service",
+      "customer": "Customer",
+      "location": "Location",
+      "service": "Service",
+      "description": "Description",
+      "markAsCompleted": "Mark as Completed",
+      "cancelRequest": "Cancel Request",
+      "noPendingRequests": "No pending work requests",
+      "newRequestsAppear": "New requests will appear here",
+      "noAcceptedJobs": "No accepted jobs pending completion",
+      "jobsYouAccept": "Jobs you accept will appear here"
+    }
+  },
+  "categories": {
+    "plumbing": "Plumbing",
+    "electrical": "Electrical",
+    "carpentry": "Carpentry",
+    "cleaning": "Cleaning",
+    "painting": "Painting",
+    "gardening": "Gardening"
+  }
+}
