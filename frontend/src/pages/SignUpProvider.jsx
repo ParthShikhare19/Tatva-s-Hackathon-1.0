@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import OtpModal from '../components/OtpModal';
+import ApiService from '../services/api';
 import { FaTools, FaUser, FaMapMarkerAlt, FaEnvelope, FaPhone, FaWrench, FaFileAlt, FaClock, FaLock } from 'react-icons/fa';
 import '../styles/Auth.css';
 
@@ -22,6 +24,8 @@ const SignUpProvider = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -37,6 +41,23 @@ const SignUpProvider = () => {
     setError('');
 
     try {
+      // Step 1: Send OTP to phone number
+      await ApiService.sendOtp(formData.mobile);
+      setOtpSent(true);
+      setShowOtpModal(true);
+      setLoading(false);
+    } catch (error) {
+      setError(error.message || 'Failed to send OTP');
+      setLoading(false);
+    }
+  };
+
+  const handleOtpVerify = async (otpCode) => {
+    try {
+      // Step 2: Verify OTP
+      await ApiService.verifyOtp(formData.mobile, otpCode);
+
+      // Step 3: If OTP verified, proceed with signup
       const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
@@ -59,13 +80,25 @@ const SignUpProvider = () => {
       }
 
       localStorage.setItem('authToken', data.access_token);
+      setShowOtpModal(false);
       navigate('/dashboard');
 
     } catch (error) {
-      setError(error.message || 'Registration failed');
-    } finally {
-      setLoading(false);
+      throw new Error(error.message || 'Verification failed');
     }
+  };
+
+  const handleResendOtp = async () => {
+    try {
+      await ApiService.resendOtp(formData.mobile);
+    } catch (error) {
+      throw new Error(error.message || 'Failed to resend OTP');
+    }
+  };
+
+  const handleCloseOtpModal = () => {
+    setShowOtpModal(false);
+    setOtpSent(false);
   };
 
   return (
@@ -183,6 +216,15 @@ const SignUpProvider = () => {
           <a href="/signin">{t('signIn')}</a>
         </p>
       </div>
+
+      {showOtpModal && (
+        <OtpModal
+          phone={formData.mobile}
+          onVerify={handleOtpVerify}
+          onClose={handleCloseOtpModal}
+          onResend={handleResendOtp}
+        />
+      )}
     </div>
   );
 };
