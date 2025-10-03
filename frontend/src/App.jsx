@@ -5,6 +5,7 @@ import SignIn from './pages/SignIn';
 import SignUpCustomer from './pages/SignUpCustomer';
 import SignUpProvider from './pages/SignUpProvider';
 import Dashboard from './pages/Dashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -15,7 +16,19 @@ function App() {
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup/customer" element={<SignUpCustomer />} />
           <Route path="/signup/provider" element={<SignUpProvider />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          
+          {/* Protected Dashboard Route */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Fallback route */}
+          <Route path="*" element={<Landing />} />
         </Routes>
       </Router>
     </LanguageProvider>

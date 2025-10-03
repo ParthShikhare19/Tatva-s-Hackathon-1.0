@@ -1,0 +1,73 @@
+const API_BASE_URL = 'http://127.0.0.1:8000';
+
+class ApiService {
+  async request(endpoint, options = {}) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    
+    const config = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    // Add auth token if available
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      throw error;
+    }
+  }
+
+  // Authentication endpoints
+  async signup(userData) {
+    return this.request('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async login(credentials) {
+    return this.request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  }
+
+  async getCurrentUser() {
+    return this.request('/auth/me');
+  }
+
+  // Token management
+  setAuthToken(token) {
+    localStorage.setItem('authToken', token);
+  }
+
+  removeAuthToken() {
+    localStorage.removeItem('authToken');
+  }
+
+  getAuthToken() {
+    return localStorage.getItem('authToken');
+  }
+
+  isAuthenticated() {
+    return !!this.getAuthToken();
+  }
+}
+
+export default new ApiService();
