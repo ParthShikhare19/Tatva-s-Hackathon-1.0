@@ -1,9 +1,9 @@
 from fastapi import FastAPI
-from routes.job_codes import router as job_codes_router
-from Database_connection.db import engine, Base
+from .routes.job_codes import router as job_codes_router
+from .Database_connection.db import engine, Base
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Don't auto-create tables - they already exist in database
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Community Connection Platform API",

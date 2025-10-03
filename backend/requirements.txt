@@ -6,6 +6,7 @@ uvicorn[standard]==0.24.0
 sqlalchemy==2.0.23
 psycopg2-binary==2.9.7
 alembic==1.12.1
+geoalchemy2==0.14.2
 
 # Environment Variables
 python-dotenv==1.0.0

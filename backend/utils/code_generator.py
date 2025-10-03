@@ -2,7 +2,7 @@ import random
 import string
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from models.job_codes import JobCode
+from ..models.job_codes import JobCode
 
 def generate_unique_code(db: Session, length: int = 6) -> str:
     """
