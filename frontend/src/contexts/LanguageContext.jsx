@@ -1,4 +1,4 @@
-import { createContext, useState, useContext } from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 
 const LanguageContext = createContext();
 
@@ -6,6 +6,8 @@ const translations = {
   en: {
     welcome: 'Welcome to DoMyService',
     tagline: 'Connecting Communities, Building Trust',
+    selectLanguage: 'Select Your Language',
+    languagePrompt: 'Choose your preferred language to continue',
     findService: 'Find a Service',
     provideService: 'Provide a Service',
     customer: 'Customer',
@@ -28,10 +30,13 @@ const translations = {
     dontHaveAccount: "Don't have an account?",
     dashboard: 'Dashboard',
     comingSoon: 'Coming Soon...',
+    emailOrMobile: 'Enter your Email ID or Mobile Number',
   },
   hi: {
     welcome: 'DoMyService में आपका स्वागत है',
     tagline: 'समुदायों को जोड़ना, विश्वास बनाना',
+    selectLanguage: 'अपनी भाषा चुनें',
+    languagePrompt: 'जारी रखने के लिए अपनी पसंदीदा भाषा चुनें',
     findService: 'सेवा खोजें',
     provideService: 'सेवा प्रदान करें',
     customer: 'ग्राहक',
@@ -54,10 +59,13 @@ const translations = {
     dontHaveAccount: 'खाता नहीं है?',
     dashboard: 'डैशबोर्ड',
     comingSoon: 'जल्द आ रहा है...',
+    emailOrMobile: 'अपना ईमेल आईडी या मोबाइल नंबर दर्ज करें',
   },
   mr: {
     welcome: 'DoMyService मध्ये तुमचे स्वागत आहे',
     tagline: 'समुदायांना जोडणे, विश्वास निर्माण करणे',
+    selectLanguage: 'तुमची भाषा निवडा',
+    languagePrompt: 'सुरू ठेवण्यासाठी तुमची आवडती भाषा निवडा',
     findService: 'सेवा शोधा',
     provideService: 'सेवा प्रदान करा',
     customer: 'ग्राहक',
@@ -80,11 +88,19 @@ const translations = {
     dontHaveAccount: 'खाते नाही आहे?',
     dashboard: 'डॅशबोर्ड',
     comingSoon: 'लवकरच येत आहे...',
+    emailOrMobile: 'आपला ईमेल आयडी किंवा मोबाइल नंबर प्रविष्ट करा',
   }
 };
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState('en');
+  const [language, setLanguage] = useState(() => {
+    const savedLanguage = localStorage.getItem('preferredLanguage');
+    return savedLanguage || 'en';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language);
+  }, [language]);
 
   const t = (key) => {
     return translations[language][key] || key;
