@@ -1933,9 +1933,15 @@ section {
   font-size: 1.1rem;
 }
 
+.save-btn.saved {
+  background: #ff5252;
+  color: white;
+}
+
 .save-btn:hover {
   background: #ff5252;
   color: white;
+  transform: scale(1.1);
 }
 
 /* Pagination */

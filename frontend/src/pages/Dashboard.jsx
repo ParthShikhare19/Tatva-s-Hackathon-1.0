@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import ProviderProfileModal from "../components/ProviderProfileModal";
 import {
   FaUserCircle,
   FaSearch,
@@ -21,6 +22,7 @@ import {
   FaTimes,
   FaUser,
 } from "react-icons/fa";
+import ApiService from "../services/api";
 import "../styles/Dashboard.css";
 
 function Dashboard() {
@@ -98,83 +100,13 @@ function CustomerDashboard({ t }) {
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [providers, setProviders] = useState([]);
+  const [stats, setStats] = useState({ active_bookings: 0, booking_history: 0, saved_providers: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedProvider, setSelectedProvider] = useState(null);
+  const [showProviderModal, setShowProviderModal] = useState(false);
   const providersPerPage = 6;
-
-  // Sample provider data
-  const [providers, setProviders] = useState([
-    {
-      id: 1,
-      name: "Rajesh Kumar",
-      service: "Plumbing",
-      description: "Expert in all plumbing works with 10+ years experience",
-      rating: 4.5,
-      location: "Mumbai",
-      reviews: 45,
-    },
-    {
-      id: 2,
-      name: "Amit Sharma",
-      service: "Electrical",
-      description: "Licensed electrician specializing in home wiring",
-      rating: 4.8,
-      location: "Delhi",
-      reviews: 62,
-    },
-    {
-      id: 3,
-      name: "Priya Patel",
-      service: "Cleaning",
-      description: "Professional cleaning services for homes and offices",
-      rating: 4.6,
-      location: "Pune",
-      reviews: 38,
-    },
-    {
-      id: 4,
-      name: "Suresh Reddy",
-      service: "Carpentry",
-      description: "Custom furniture and woodwork specialist",
-      rating: 4.7,
-      location: "Bangalore",
-      reviews: 51,
-    },
-    {
-      id: 5,
-      name: "Neha Singh",
-      service: "Painting",
-      description: "Interior and exterior painting with quality finish",
-      rating: 4.4,
-      location: "Mumbai",
-      reviews: 29,
-    },
-    {
-      id: 6,
-      name: "Vikram Joshi",
-      service: "Gardening",
-      description: "Landscaping and garden maintenance expert",
-      rating: 4.9,
-      location: "Pune",
-      reviews: 73,
-    },
-    {
-      id: 7,
-      name: "Anita Desai",
-      service: "Plumbing",
-      description: "Quick and reliable plumbing repairs",
-      rating: 4.3,
-      location: "Delhi",
-      reviews: 34,
-    },
-    {
-      id: 8,
-      name: "Rahul Mehta",
-      service: "Electrical",
-      description: "24/7 emergency electrical services",
-      rating: 4.6,
-      location: "Bangalore",
-      reviews: 48,
-    },
-  ]);
 
   const categories = ["All", "Plumbing", "Electrical", "Carpentry", "Cleaning", "Painting", "Gardening"];
   const locations = ["All", "Mumbai", "Delhi", "Pune", "Bangalore"];
@@ -185,25 +117,71 @@ function CustomerDashboard({ t }) {
     { label: "3.5+ Stars", value: "3.5" },
   ];
 
-  // Filter providers based on search and filters
-  const filteredProviders = providers.filter((provider) => {
-    const matchesSearch = provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         provider.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         provider.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = selectedCategory === "all" || 
-                           provider.service.toLowerCase() === selectedCategory.toLowerCase();
-    
-    const matchesRating = selectedRating === "all" || 
-                         provider.rating >= parseFloat(selectedRating);
-    
-    const matchesLocation = selectedLocation === "all" || 
-                           provider.location.toLowerCase() === selectedLocation.toLowerCase();
-    
-    return matchesSearch && matchesCategory && matchesRating && matchesLocation;
-  });
+  // Fetch stats and providers on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Check if authenticated before making requests
+        if (!ApiService.isAuthenticated()) {
+          setError('Please log in to view providers');
+          setLoading(false);
+          return;
+        }
+        
+        const [statsData, providersData] = await Promise.all([
+          ApiService.getCustomerStats(),
+          ApiService.getProviders({ limit: 50 })
+        ]);
+        setStats(statsData);
+        setProviders(providersData || []);
+      } catch (err) {
+        const errorMessage = err.message || 'Failed to fetch data';
+        setError(errorMessage);
+        console.error('Error fetching dashboard data:', err);
+        
+        // If authentication error, redirect to login
+        if (errorMessage.includes('401') || errorMessage.includes('authenticated') || errorMessage.includes('token')) {
+          setTimeout(() => {
+            localStorage.clear();
+            window.location.href = '/signin';
+          }, 2000);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
-  // Pagination
+  // Refetch providers when filters change
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        const filters = {};
+        if (searchQuery) filters.search = searchQuery;
+        if (selectedCategory !== 'all') filters.service = selectedCategory;
+        if (selectedLocation !== 'all') filters.location = selectedLocation;
+        if (selectedRating !== 'all') filters.min_rating = parseFloat(selectedRating);
+        
+        const data = await ApiService.getProviders(filters);
+        setProviders(data);
+      } catch (err) {
+        console.error('Error fetching providers:', err);
+      }
+    };
+    
+    const timeoutId = setTimeout(() => {
+      fetchProviders();
+    }, 300); // Debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, selectedCategory, selectedLocation, selectedRating]);
+
+  // Pagination - now works directly on providers from backend
+  const filteredProviders = providers; // Backend already filtered
   const indexOfLastProvider = currentPage * providersPerPage;
   const indexOfFirstProvider = indexOfLastProvider - providersPerPage;
   const currentProviders = filteredProviders.slice(indexOfFirstProvider, indexOfLastProvider);
@@ -219,6 +197,110 @@ function CustomerDashboard({ t }) {
     setCurrentPage(1);
   };
 
+  const handleSaveProvider = async (providerPhone, isSaved) => {
+    try {
+      if (isSaved) {
+        await ApiService.unsaveProvider(providerPhone);
+      } else {
+        await ApiService.saveProvider(providerPhone);
+      }
+      // Update local state
+      setProviders(providers.map(p => 
+        p.phone === providerPhone ? { ...p, is_saved: !isSaved } : p
+      ));
+      // Update selected provider if modal is open
+      if (selectedProvider && selectedProvider.phone === providerPhone) {
+        setSelectedProvider({ ...selectedProvider, is_saved: !isSaved });
+      }
+      // Refresh stats to update saved providers count
+      try {
+        const updatedStats = await ApiService.getCustomerStats();
+        setStats(updatedStats);
+      } catch (err) {
+        console.error('Error refreshing stats:', err);
+      }
+    } catch (err) {
+      console.error('Error toggling saved provider:', err);
+      alert(err.message || 'Failed to update saved providers');
+    }
+  };
+
+  const handleOpenProviderModal = (provider) => {
+    setSelectedProvider(provider);
+    setShowProviderModal(true);
+  };
+
+  const handleCloseProviderModal = () => {
+    setShowProviderModal(false);
+    setTimeout(() => setSelectedProvider(null), 300);
+  };
+
+  const handleBookProvider = async (bookingData) => {
+    try {
+      const response = await ApiService.createBooking({
+        provider_phone: bookingData.providerPhone,
+        service: bookingData.service,
+        booking_type: bookingData.bookingType,
+        scheduled_date: bookingData.scheduledDate,
+        scheduled_time: bookingData.scheduledTime,
+        description: bookingData.description
+      });
+      
+      // Show success message with booking code
+      const bookingType = bookingData.bookingType === 'immediate' ? 'Immediate' : 'Scheduled';
+      const scheduleInfo = bookingData.bookingType === 'scheduled' 
+        ? `Date: ${bookingData.scheduledDate}\nTime: ${bookingData.scheduledTime}\n` 
+        : '';
+      
+      alert(
+        `✅ Booking Confirmed!\n\n` +
+        `Type: ${bookingType}\n` +
+        `Provider: ${selectedProvider.name}\n` +
+        `Service: ${bookingData.service}\n` +
+        scheduleInfo +
+        `\nBooking Code: ${response.one_time_code}\n\n` +
+        `The provider has been notified. Please save this code for reference.`
+      );
+      
+      // Refresh stats to update active bookings count
+      try {
+        const updatedStats = await ApiService.getCustomerStats();
+        setStats(updatedStats);
+      } catch (err) {
+        console.error('Error refreshing stats:', err);
+      }
+      
+      handleCloseProviderModal();
+    } catch (err) {
+      console.error('Error creating booking:', err);
+      throw err;
+    }
+  };
+
+  // Show error message if there's an authentication or fetch error
+  if (error) {
+    return (
+      <div className="dashboard-content">
+        <div className="error-message" style={{ 
+          padding: '20px', 
+          backgroundColor: '#fee', 
+          color: '#c33', 
+          borderRadius: '8px', 
+          margin: '20px',
+          textAlign: 'center'
+        }}>
+          <h3>Error Loading Dashboard</h3>
+          <p>{error}</p>
+          <p style={{ fontSize: '14px', marginTop: '10px' }}>
+            {error.includes('authenticated') || error.includes('log in') ? 
+              'Redirecting to login...' : 
+              'Please check your connection and try again.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-content">
       {/* Stats Cards - Now on Top */}
@@ -227,21 +309,21 @@ function CustomerDashboard({ t }) {
           <FaCalendarAlt className="stat-icon" />
           <div className="stat-info">
             <h4>{t("dashboard.customer.activeBookings")}</h4>
-            <p className="stat-number">0</p>
+            <p className="stat-number">{stats.active_bookings}</p>
           </div>
         </div>
         <div className="stat-card">
           <FaClock className="stat-icon" />
           <div className="stat-info">
             <h4>{t("dashboard.customer.bookingHistory")}</h4>
-            <p className="stat-number">0</p>
+            <p className="stat-number">{stats.booking_history}</p>
           </div>
         </div>
         <div className="stat-card">
           <FaHeart className="stat-icon" />
           <div className="stat-info">
             <h4>{t("dashboard.customer.savedProviders")}</h4>
-            <p className="stat-number">0</p>
+            <p className="stat-number">{stats.saved_providers}</p>
           </div>
         </div>
       </div>
@@ -349,15 +431,15 @@ function CustomerDashboard({ t }) {
           <>
             <div className="providers-grid">
               {currentProviders.map((provider) => (
-                <div key={provider.id} className="provider-card">
+                <div key={provider.phone} className="provider-card">
                   <div className="provider-header">
                     <FaUserCircle className="provider-avatar" />
                     <div className="provider-info">
                       <h4 className="provider-name">{provider.name}</h4>
                       <div className="provider-rating">
                         <FaStar className="star-icon" />
-                        <span className="rating-value">{provider.rating}</span>
-                        <span className="reviews-count">({provider.reviews} reviews)</span>
+                        <span className="rating-value">{provider.rating.toFixed(1)}</span>
+                        <span className="reviews-count">({provider.reviews_count} reviews)</span>
                       </div>
                     </div>
                   </div>
@@ -365,15 +447,24 @@ function CustomerDashboard({ t }) {
                     <div className="service-badge">
                       <FaTools /> {provider.service}
                     </div>
-                    <p className="provider-description">{provider.description}</p>
+                    <p className="provider-description">{provider.description || 'No description available'}</p>
                     <div className="provider-location">
                       <FaMapMarkerAlt className="location-icon" />
-                      <span>{provider.location}</span>
+                      <span>{provider.location || 'Location not specified'}</span>
                     </div>
                   </div>
                   <div className="provider-actions">
-                    <button className="book-btn">Book Now</button>
-                    <button className="save-btn">
+                    <button 
+                      className="book-btn"
+                      onClick={() => handleOpenProviderModal(provider)}
+                    >
+                      Book Now
+                    </button>
+                    <button 
+                      className={`save-btn ${provider.is_saved ? 'saved' : ''}`}
+                      onClick={() => handleSaveProvider(provider.phone, provider.is_saved)}
+                      title={provider.is_saved ? 'Unsave' : 'Save'}
+                    >
                       <FaHeart />
                     </button>
                   </div>
@@ -422,6 +513,16 @@ function CustomerDashboard({ t }) {
           </div>
         )}
       </section>
+
+      {/* Provider Profile Modal */}
+      {showProviderModal && selectedProvider && (
+        <ProviderProfileModal
+          provider={selectedProvider}
+          onClose={handleCloseProviderModal}
+          onBook={handleBookProvider}
+          onToggleSave={handleSaveProvider}
+        />
+      )}
     </div>
   );
 }
