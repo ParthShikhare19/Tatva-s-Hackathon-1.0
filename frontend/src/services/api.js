@@ -71,6 +71,25 @@ class ApiService {
     });
   }
 
+  // Customer profile endpoints
+  async getCustomerProfile() {
+    return this.request('/customers/profile');
+  }
+
+  async updateCustomerProfile(profileData) {
+    return this.request('/customers/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  }
+
+  async createCustomerProfile(profileData) {
+    return this.request('/customers/profile', {
+      method: 'POST',
+      body: JSON.stringify(profileData),
+    });
+  }
+
   // OTP endpoints
   async sendOtp(phone) {
     return this.request('/auth/send-otp', {
