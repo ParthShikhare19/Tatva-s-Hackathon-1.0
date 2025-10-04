@@ -14,7 +14,10 @@
     "getStarted": "Get Started",
     "pending": "pending",
     "accepted": "Accepted",
-    "noDataYet": "No data yet"
+    "noDataYet": "No data yet",
+    "confirmLogout": "Are you sure you want to logout?",
+    "confirmCancelJob": "Are you sure you want to cancel this accepted job?",
+    "confirmRejectRequest": "Are you sure you want to reject this customer request?"
   },
   "dashboard": {
     "welcomeBack": "Welcome Back",
