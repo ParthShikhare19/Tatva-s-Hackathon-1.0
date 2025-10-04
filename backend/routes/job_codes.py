@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from ..Database_connection.db import get_db
-from ..models.job_codes import JobCode
-from ..models.providers import Provider
-from ..utils.code_generator import create_job_code, validate_and_use_code
+from Database_connection.db import get_db
+from models.job_codes import JobCode
+from models.providers import Provider
+from utils.code_generator import create_job_code, validate_and_use_code
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -26,7 +26,6 @@ def generate_job_code(
     """
     Generate a new job completion code for a provider.
     """
-    # Verify provider exists
     provider = db.query(Provider).filter(Provider.user_id == provider_id).first()
     if not provider:
         raise HTTPException(
@@ -34,7 +33,6 @@ def generate_job_code(
             detail="Provider not found"
         )
     
-    # Create job code
     job_code = create_job_code(db, provider_id)
     
     return JobCodeResponse(
@@ -87,4 +85,54 @@ def get_provider_codes(
         for code in codes
     ]
 
-#changes for testing
+@router.get("/current/{provider_id}")
+def get_current_service_code(
+    provider_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get current active service code for provider"""
+    from ..utils.code_generator import generate_unique_code, create_job_code
+    from datetime import datetime, timedelta
+    
+    active_code = db.query(JobCode).filter(
+        JobCode.provider_id == provider_id,
+        JobCode.status == "UNUSED",
+        JobCode.expires_at > datetime.utcnow()
+    ).first()
+    
+    if active_code:
+        expires_in = (active_code.expires_at - datetime.utcnow()).total_seconds()
+        return {
+            "code": active_code.code,
+            "expires_at": active_code.expires_at,
+            "expires_in_seconds": max(0, int(expires_in))
+        }
+
+    new_code = create_job_code(db, provider_id)
+    return {
+        "code": new_code.code,
+        "expires_at": new_code.expires_at,
+        "expires_in_seconds": 604800  
+    }
+
+@router.post("/refresh/{provider_id}")
+def refresh_service_code(
+    provider_id: int,
+    db: Session = Depends(get_db)
+):
+    """Generate a new service code for provider"""
+    from ..utils.code_generator import create_job_code
+    
+    db.query(JobCode).filter(
+        JobCode.provider_id == provider_id,
+        JobCode.status == "UNUSED"
+    ).update({"status": "EXPIRED"})
+    
+    new_code = create_job_code(db, provider_id)
+    db.commit()
+    
+    return {
+        "code": new_code.code,
+        "expires_at": new_code.expires_at,
+        "expires_in_seconds": 604800
+    }

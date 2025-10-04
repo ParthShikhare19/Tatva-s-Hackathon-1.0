@@ -238,6 +238,40 @@ class ApiService {
   isAuthenticated() {
     return !!this.getAuthToken();
   }
+
+  async getProviderProfile(userId) {
+    return this.request(`/providers/${userId}/profile`);
+  }
+
+  async getProviderPendingRequests(userId) {
+    return this.request(`/providers/${userId}/pending-requests`);
+  }
+
+  async getProviderAcceptedJobs(userId) {
+    return this.request(`/providers/${userId}/accepted-jobs`);
+  }
+
+  async getProviderCompletedJobs(userId) {
+    return this.request(`/providers/${userId}/completed-jobs`);
+  }
+
+  async acceptJobRequest(requestId) {
+    return this.request(`/jobs/${requestId}/accept`, {
+      method: 'POST'
+    });
+  }
+
+  async rejectJobRequest(requestId) {
+    return this.request(`/jobs/${requestId}/reject`, {
+      method: 'POST'
+    });
+  }
+
+  async completeJob(jobId) {
+    return this.request(`/jobs/${jobId}/complete`, {
+      method: 'POST'
+    });
+  }
 }
 
 export default new ApiService();
