@@ -8,6 +8,14 @@ from backend.models.reviews import Review
 from backend.models.saved_providers import SavedProvider
 from backend.models.providers import Provider
 from backend.auth.models import User
+from backend.utils.whatsapp_service import (
+    notify_provider_new_booking,
+    notify_customer_booking_accepted,
+    notify_customer_booking_rejected,
+    notify_customer_work_completed,
+    notify_provider_booking_cancelled,
+    notify_customer_job_cancelled
+)
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime, timezone
@@ -274,6 +282,20 @@ async def create_booking(
     print(f"   Status: {new_booking.status}")
     print(f"   Type: {new_booking.booking_type}")
     print(f"   Code: {new_booking.one_time_code}")
+    
+    # 📱 Send WhatsApp notification to provider
+    try:
+        await notify_provider_new_booking(
+            provider_phone=provider.phone_number,
+            customer_name=current_user.name,
+            service=request.service,
+            booking_type=request.booking_type,
+            description=full_description
+        )
+        print(f"✅ WhatsApp notification sent to provider")
+    except Exception as e:
+        print(f"⚠️ Failed to send WhatsApp notification to provider: {str(e)}")
+        # Don't fail the booking if notification fails
     
     return {
         "success": True,
@@ -718,6 +740,25 @@ async def accept_booking(
     
     db.commit()
     
+    # Get customer details for WhatsApp notification
+    customer = db.query(User).filter(
+        User.phone_number == booking.customer_phone
+    ).first()
+    
+    # 📱 Send WhatsApp notification to customer
+    if customer:
+        try:
+            await notify_customer_booking_accepted(
+                customer_phone=customer.phone_number,
+                provider_name=current_user.name,
+                service=booking.service,
+                acceptance_code=acceptance_code
+            )
+            print(f"✅ WhatsApp acceptance notification sent to customer")
+        except Exception as e:
+            print(f"⚠️ Failed to send WhatsApp notification to customer: {str(e)}")
+            # Don't fail the acceptance if notification fails
+    
     return {
         "message": "Booking accepted successfully",
         "booking_id": booking.id,
@@ -754,6 +795,24 @@ async def reject_booking(
     booking.status = BookingStatus.REJECTED
     db.commit()
     
+    # Get customer details for WhatsApp notification
+    customer = db.query(User).filter(
+        User.phone_number == booking.customer_phone
+    ).first()
+    
+    # 📱 Send WhatsApp notification to customer
+    if customer:
+        try:
+            await notify_customer_booking_rejected(
+                customer_phone=customer.phone_number,
+                provider_name=current_user.name,
+                service=booking.service
+            )
+            print(f"✅ WhatsApp rejection notification sent to customer")
+        except Exception as e:
+            print(f"⚠️ Failed to send WhatsApp notification to customer: {str(e)}")
+            # Don't fail the rejection if notification fails
+    
     return {"message": "Booking rejected successfully"}
 
 
@@ -785,7 +844,78 @@ async def cancel_accepted_job(
     booking.status = BookingStatus.CANCELLED
     db.commit()
     
+    # Get customer details for WhatsApp notification
+    customer = db.query(User).filter(
+        User.phone_number == booking.customer_phone
+    ).first()
+    
+    # 📱 Send WhatsApp notification to customer
+    if customer:
+        try:
+            await notify_customer_job_cancelled(
+                customer_phone=customer.phone_number,
+                provider_name=current_user.name,
+                service=booking.service
+            )
+            print(f"✅ WhatsApp job cancellation notification sent to customer")
+        except Exception as e:
+            print(f"⚠️ Failed to send WhatsApp notification to customer: {str(e)}")
+            # Don't fail the cancellation if notification fails
+    
     return {"message": "Job cancelled successfully"}
+
+
+@router.post("/customer/cancel-booking")
+async def customer_cancel_booking(
+    request: AcceptBookingRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Customer cancels a booking (pending or accepted)"""
+    if current_user.role != "customer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only customers can cancel their bookings"
+        )
+    
+    booking = db.query(Booking).filter(
+        Booking.id == request.booking_id,
+        Booking.customer_phone == current_user.phone_number,
+        or_(
+            Booking.status == BookingStatus.PENDING,
+            Booking.status == BookingStatus.ACCEPTED
+        )
+    ).first()
+    
+    if not booking:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Booking not found or already completed/cancelled"
+        )
+    
+    booking.status = BookingStatus.CANCELLED
+    db.commit()
+    
+    # Get provider details for WhatsApp notification
+    provider = db.query(User).filter(
+        User.phone_number == booking.provider_phone
+    ).first()
+    
+    # 📱 Send WhatsApp notification to provider
+    if provider:
+        try:
+            await notify_provider_booking_cancelled(
+                provider_phone=provider.phone_number,
+                customer_name=current_user.name,
+                service=booking.service,
+                booking_type=booking.booking_type
+            )
+            print(f"✅ WhatsApp booking cancellation notification sent to provider")
+        except Exception as e:
+            print(f"⚠️ Failed to send WhatsApp notification to provider: {str(e)}")
+            # Don't fail the cancellation if notification fails
+    
+    return {"message": "Booking cancelled successfully"}
 
 
 # ==================== SAVED PROVIDERS ====================
