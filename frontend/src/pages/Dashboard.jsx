@@ -250,19 +250,19 @@ function CustomerDashboard({ t }) {
   };
 
   const handleSaveProvider = (provider) => {
-    const isAlreadySaved = savedProviders.some(p => p.id === provider.id);
-    
+    const isAlreadySaved = savedProviders.some((p) => p.id === provider.id);
+
     if (isAlreadySaved) {
       // Remove from saved
-      setSavedProviders(prev => prev.filter(p => p.id !== provider.id));
+      setSavedProviders((prev) => prev.filter((p) => p.id !== provider.id));
     } else {
       // Add to saved
-      setSavedProviders(prev => [...prev, provider]);
+      setSavedProviders((prev) => [...prev, provider]);
     }
   };
 
   const isProviderSaved = (providerId) => {
-    return savedProviders.some(p => p.id === providerId);
+    return savedProviders.some((p) => p.id === providerId);
   };
 
   const handleViewSavedProviders = () => {
@@ -274,7 +274,7 @@ function CustomerDashboard({ t }) {
   };
 
   const handleRemoveSavedProvider = (providerId) => {
-    setSavedProviders(prev => prev.filter(p => p.id !== providerId));
+    setSavedProviders((prev) => prev.filter((p) => p.id !== providerId));
   };
 
   return (
@@ -295,7 +295,7 @@ function CustomerDashboard({ t }) {
             <p className="stat-number">0</p>
           </div>
         </div>
-        <div 
+        <div
           className="stat-card stat-clickable"
           onClick={handleViewSavedProviders}
           title="Click to view saved providers"
@@ -446,12 +446,22 @@ function CustomerDashboard({ t }) {
                   </div>
                   <div className="provider-actions">
                     <button className="book-btn">Book Now</button>
-                    <button 
-                      className={`save-btn ${isProviderSaved(provider.id) ? 'saved' : ''}`}
+                    <button
+                      className={`save-btn ${
+                        isProviderSaved(provider.id) ? "saved" : ""
+                      }`}
                       onClick={() => handleSaveProvider(provider)}
-                      title={isProviderSaved(provider.id) ? "Remove from saved" : "Save provider"}
+                      title={
+                        isProviderSaved(provider.id)
+                          ? "Remove from saved"
+                          : "Save provider"
+                      }
                     >
-                      {isProviderSaved(provider.id) ? <FaBookmark /> : <FaRegBookmark />}
+                      {isProviderSaved(provider.id) ? (
+                        <FaBookmark />
+                      ) : (
+                        <FaRegBookmark />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -510,7 +520,10 @@ function CustomerDashboard({ t }) {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Saved Providers</h3>
-              <button className="modal-close-btn" onClick={handleCloseSavedProviders}>
+              <button
+                className="modal-close-btn"
+                onClick={handleCloseSavedProviders}
+              >
                 <FaTimes />
               </button>
             </div>
@@ -525,8 +538,12 @@ function CustomerDashboard({ t }) {
                           <h4 className="provider-name">{provider.name}</h4>
                           <div className="provider-rating">
                             <FaStar className="star-icon" />
-                            <span className="rating-value">{provider.rating}</span>
-                            <span className="reviews-count">({provider.reviews} reviews)</span>
+                            <span className="rating-value">
+                              {provider.rating}
+                            </span>
+                            <span className="reviews-count">
+                              ({provider.reviews} reviews)
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -534,7 +551,9 @@ function CustomerDashboard({ t }) {
                         <div className="service-badge">
                           <FaTools /> {provider.service}
                         </div>
-                        <p className="provider-description">{provider.description}</p>
+                        <p className="provider-description">
+                          {provider.description}
+                        </p>
                         <div className="provider-location">
                           <FaMapMarkerAlt className="location-icon" />
                           <span>{provider.location}</span>
@@ -542,7 +561,7 @@ function CustomerDashboard({ t }) {
                       </div>
                       <div className="provider-actions">
                         <button className="book-btn">Book Now</button>
-                        <button 
+                        <button
                           className="remove-btn"
                           onClick={() => handleRemoveSavedProvider(provider.id)}
                         >
@@ -556,7 +575,9 @@ function CustomerDashboard({ t }) {
                 <div className="empty-state">
                   <FaBookmark className="empty-icon" />
                   <p>No saved providers yet</p>
-                  <p className="empty-subtitle">Save providers to easily find them later</p>
+                  <p className="empty-subtitle">
+                    Save providers to easily find them later
+                  </p>
                 </div>
               )}
             </div>
@@ -595,12 +616,16 @@ function ProviderDashboard({ t, userName, handleLogout }) {
         const data = await api.getProviderProfile();
         setProfileData({
           name: data.name || userName || "Provider Name",
-          email: "provider@example.com", // Not in backend yet
+          email: data.email_id || "provider@example.com",
           phone: data.phone_number || "+91 9876543210",
           address: data.location_name || "Mumbai, Maharashtra",
           specialization: "Plumbing, Electrical", // Not in backend yet
-          experience: "5 years", // Not in backend yet
-          bio: data.bio || "Professional service provider with expertise in multiple domains.",
+          experience: data.years_of_experience
+            ? `${data.years_of_experience} years`
+            : "5 years",
+          bio:
+            data.bio ||
+            "Professional service provider with expertise in multiple domains.",
         });
         setLoadingProfile(false);
       } catch (error) {
@@ -744,53 +769,68 @@ function ProviderDashboard({ t, userName, handleLogout }) {
 
   const handleSaveProfile = async () => {
     try {
+      // Extract numeric years from experience string (e.g., "5 years" -> 5)
+      const experienceYears = parseInt(editedProfile.experience) || null;
+
       // Prepare data for backend (only fields that exist in backend)
       const updateData = {
         name: editedProfile.name,
+        email_id: editedProfile.email,
         bio: editedProfile.bio,
         location_name: editedProfile.address,
+        years_of_experience: experienceYears,
       };
 
       // Try to update existing profile
       const updatedProfile = await api.updateProviderProfile(updateData);
-      
+
       // Update local state with response from backend
       setProfileData({
         name: updatedProfile.name,
-        email: profileData.email, // Keep existing (not in backend)
+        email: updatedProfile.email_id,
         phone: updatedProfile.phone_number,
         address: updatedProfile.location_name,
         specialization: profileData.specialization, // Keep existing (not in backend)
-        experience: profileData.experience, // Keep existing (not in backend)
+        experience: updatedProfile.years_of_experience
+          ? `${updatedProfile.years_of_experience} years`
+          : "5 years",
         bio: updatedProfile.bio,
       });
-      
+
       setIsEditingProfile(false);
       console.log("Profile updated successfully:", updatedProfile);
     } catch (error) {
       console.error("Error updating profile:", error);
-      
+
       // If profile doesn't exist (404), try to create it
-      if (error.message.includes("404") || error.message.includes("not found")) {
+      if (
+        error.message.includes("404") ||
+        error.message.includes("not found")
+      ) {
         try {
+          const experienceYears = parseInt(editedProfile.experience) || null;
+
           const createData = {
             bio: editedProfile.bio,
             location_name: editedProfile.address,
+            years_of_experience: experienceYears,
           };
-          
+
           const newProfile = await api.createProviderProfile(createData);
-          
+
           // Update local state with new profile
           setProfileData({
             name: userName,
-            email: profileData.email,
+            email: newProfile.email_id,
             phone: newProfile.phone_number,
             address: newProfile.location_name,
             specialization: profileData.specialization,
-            experience: profileData.experience,
+            experience: newProfile.years_of_experience
+              ? `${newProfile.years_of_experience} years`
+              : "5 years",
             bio: newProfile.bio,
           });
-          
+
           setIsEditingProfile(false);
           console.log("Profile created successfully:", newProfile);
         } catch (createError) {

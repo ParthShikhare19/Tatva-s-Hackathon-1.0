@@ -19,18 +19,23 @@ router = APIRouter(prefix="/providers", tags=["Providers"])
 class ProviderProfileCreate(BaseModel):
     bio: Optional[str] = Field(None, max_length=1000, description="Provider biography")
     location_name: Optional[str] = Field(None, max_length=255, description="Provider location")
+    years_of_experience: Optional[int] = Field(None, description="Years of experience")
 
 class ProviderProfileUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100, description="User's name")
+    email_id: Optional[str] = Field(None, max_length=255, description="User's email")
     bio: Optional[str] = Field(None, max_length=1000, description="Provider biography")
     location_name: Optional[str] = Field(None, max_length=255, description="Provider location")
+    years_of_experience: Optional[int] = Field(None, description="Years of experience")
 
 class ProviderProfileResponse(BaseModel):
     user_id: int
     name: str  # User's name
     phone_number: str  # User's phone number
+    email_id: Optional[str]  # User's email
     bio: Optional[str]
     location_name: Optional[str]
+    years_of_experience: Optional[int]  # Years of experience
     average_rating: Decimal
     jobs_completed: int
     is_verified: bool
@@ -69,6 +74,7 @@ def create_provider_profile(
         user_id=current_user.id,
         bio=profile_data.bio,
         location_name=profile_data.location_name,
+        years_of_experience=profile_data.years_of_experience,
         average_rating=Decimal("0.0"),
         jobs_completed=0,
         is_verified=False
@@ -78,7 +84,18 @@ def create_provider_profile(
     db.commit()
     db.refresh(new_provider)
     
-    return new_provider
+    return ProviderProfileResponse(
+        user_id=new_provider.user_id,
+        name=current_user.name,
+        phone_number=current_user.phone_number,
+        email_id=current_user.email_id,
+        bio=new_provider.bio,
+        location_name=new_provider.location_name,
+        years_of_experience=new_provider.years_of_experience,
+        average_rating=new_provider.average_rating,
+        jobs_completed=new_provider.jobs_completed,
+        is_verified=new_provider.is_verified
+    )
 
 @router.put("/profile", response_model=ProviderProfileResponse)
 def update_provider_profile(
@@ -118,11 +135,17 @@ def update_provider_profile(
     if profile_data.name is not None:
         user.name = profile_data.name
     
+    # Update user email if provided
+    if profile_data.email_id is not None:
+        user.email_id = profile_data.email_id
+    
     # Update provider fields if provided
     if profile_data.bio is not None:
         provider.bio = profile_data.bio
     if profile_data.location_name is not None:
         provider.location_name = profile_data.location_name
+    if profile_data.years_of_experience is not None:
+        provider.years_of_experience = profile_data.years_of_experience
     
     db.commit()
     db.refresh(provider)
@@ -133,8 +156,10 @@ def update_provider_profile(
         user_id=provider.user_id,
         name=user.name,
         phone_number=user.phone_number,
+        email_id=user.email_id,
         bio=provider.bio,
         location_name=provider.location_name,
+        years_of_experience=provider.years_of_experience,
         average_rating=provider.average_rating,
         jobs_completed=provider.jobs_completed,
         is_verified=provider.is_verified
@@ -167,8 +192,10 @@ def get_my_provider_profile(
         user_id=provider.user_id,
         name=current_user.name,
         phone_number=current_user.phone_number,
+        email_id=current_user.email_id,
         bio=provider.bio,
         location_name=provider.location_name,
+        years_of_experience=provider.years_of_experience,
         average_rating=provider.average_rating,
         jobs_completed=provider.jobs_completed,
         is_verified=provider.is_verified
@@ -190,7 +217,27 @@ def get_provider_profile_by_id(
             detail="Provider profile not found"
         )
     
-    return provider
+    # Get user data
+    user = db.query(User).filter(User.id == provider.user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Return combined user and provider data
+    return ProviderProfileResponse(
+        user_id=provider.user_id,
+        name=user.name,
+        phone_number=user.phone_number,
+        email_id=user.email_id,
+        bio=provider.bio,
+        location_name=provider.location_name,
+        years_of_experience=provider.years_of_experience,
+        average_rating=provider.average_rating,
+        jobs_completed=provider.jobs_completed,
+        is_verified=provider.is_verified
+    )
 
 @router.delete("/profile", status_code=status.HTTP_204_NO_CONTENT)
 def delete_provider_profile(
