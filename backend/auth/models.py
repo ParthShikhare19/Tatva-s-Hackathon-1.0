@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Numeric
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import func
 from .database import Base
 
@@ -31,3 +31,5 @@ class Customer(Base):
     address = Column(Text)
     location_name = Column(String(255))
     preferences = Column(String(500))
+    role = Column(String(10), nullable=False)  # 'customer' or 'provider'
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -234,6 +234,8 @@ def get_provider_profile_by_id(
         bio=provider.bio,
         location_name=provider.location_name,
         years_of_experience=provider.years_of_experience,
+        bio=provider.bio,
+        location_name=provider.location_name,
         average_rating=provider.average_rating,
         jobs_completed=provider.jobs_completed,
         is_verified=provider.is_verified
