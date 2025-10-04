@@ -1,9 +1,14 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Numeric, Boolean
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import func
-from .database import Base
+import sys
+from pathlib import Path
+# Add parent directory to path to match how providers.py does it
+sys.path.append(str(Path(__file__).parent.parent))
+from Database_connection.db import Base
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     phone_number = Column(String(15), unique=True, index=True, nullable=False)
@@ -11,25 +16,4 @@ class User(Base):
     name = Column(String(100), nullable=False)
     email_id = Column(String(255), nullable=True)
     role = Column(String(10), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-class Provider(Base):
-    __tablename__ = "providers"
-    
-    user_id = Column(Integer, primary_key=True)
-    bio = Column(Text)
-    location_name = Column(String(255))
-    years_of_experience = Column(Integer, nullable=True)
-    average_rating = Column(Numeric(2, 1), default=0.0)
-    jobs_completed = Column(Integer, default=0)
-    is_verified = Column(Boolean, default=False)
-
-class Customer(Base):
-    __tablename__ = "customers"
-    
-    user_id = Column(Integer, primary_key=True)
-    address = Column(Text)
-    location_name = Column(String(255))
-    preferences = Column(String(500))
-    role = Column(String(10), nullable=False)  # 'customer' or 'provider'
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -1,6 +1,10 @@
 from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from ..Database_connection.db import Base
+import sys
+from pathlib import Path
+# Add parent directory to path to match how it's done in routes
+sys.path.append(str(Path(__file__).parent.parent))
+from Database_connection.db import Base
 
 class Provider(Base):
     __tablename__ = "providers"
