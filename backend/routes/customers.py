@@ -21,12 +21,18 @@ class CustomerProfileCreate(BaseModel):
     preferences: Optional[str] = Field(None, max_length=500, description="Service preferences")
 
 class CustomerProfileUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=100, description="Customer name")
+    phone_number: Optional[str] = Field(None, max_length=15, description="Customer phone number")
+    email_id: Optional[str] = Field(None, max_length=255, description="Customer email")
     address: Optional[str] = Field(None, max_length=500, description="Customer address")
     location_name: Optional[str] = Field(None, max_length=255, description="Customer location")
     preferences: Optional[str] = Field(None, max_length=500, description="Service preferences")
 
 class CustomerProfileResponse(BaseModel):
     user_id: int
+    name: Optional[str] = None
+    phone_number: Optional[str] = None
+    email_id: Optional[str] = None
     address: Optional[str]
     location_name: Optional[str]
     preferences: Optional[str]
@@ -82,7 +88,7 @@ def update_customer_profile(
 ):
     """
     Update the customer profile for the authenticated user.
-    Only users with role 'customer' can update their customer profile.
+    Updates name, phone, and email in the users table.
     """
     # Verify user is a customer
     if current_user.role != "customer":
@@ -91,26 +97,29 @@ def update_customer_profile(
             detail="Only users with customer role can update a customer profile"
         )
     
-    # Get existing customer profile
-    customer = db.query(Customer).filter(Customer.user_id == current_user.id).first()
-    if not customer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer profile not found. Use POST /customers/profile to create one."
-        )
+    # Update user fields - query fresh from database
+    user = db.query(User).filter(User.id == current_user.id).first()
     
-    # Update only provided fields
-    if profile_data.address is not None:
-        customer.address = profile_data.address
-    if profile_data.location_name is not None:
-        customer.location_name = profile_data.location_name
-    if profile_data.preferences is not None:
-        customer.preferences = profile_data.preferences
+    if profile_data.name is not None:
+        user.name = profile_data.name
+    if profile_data.phone_number is not None:
+        user.phone_number = profile_data.phone_number
+    if profile_data.email_id is not None:
+        user.email_id = profile_data.email_id
     
     db.commit()
-    db.refresh(customer)
+    db.refresh(user)
     
-    return customer
+    # Return user data
+    return CustomerProfileResponse(
+        user_id=user.id,
+        name=user.name,
+        phone_number=user.phone_number,
+        email_id=user.email_id,
+        address=None,  # Not using customers table
+        location_name=None,  # Not using customers table
+        preferences=None  # Not using customers table
+    )
 
 @router.get("/profile", response_model=CustomerProfileResponse)
 def get_my_customer_profile(
@@ -119,6 +128,7 @@ def get_my_customer_profile(
 ):
     """
     Get the customer profile for the authenticated user.
+    Fetches data from users table only.
     """
     # Verify user is a customer
     if current_user.role != "customer":
@@ -127,14 +137,19 @@ def get_my_customer_profile(
             detail="Only users with customer role can access customer profiles"
         )
     
-    customer = db.query(Customer).filter(Customer.user_id == current_user.id).first()
-    if not customer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer profile not found"
-        )
+    # Get user data directly
+    user = db.query(User).filter(User.id == current_user.id).first()
     
-    return customer
+    # Return user data (no need for customers table)
+    return CustomerProfileResponse(
+        user_id=user.id,
+        name=user.name,
+        phone_number=user.phone_number,
+        email_id=user.email_id,
+        address=None,  # Not using customers table
+        location_name=None,  # Not using customers table
+        preferences=None  # Not using customers table
+    )
 
 @router.get("/profile/{customer_id}", response_model=CustomerProfileResponse)
 def get_customer_profile_by_id(

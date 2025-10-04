@@ -39,6 +39,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const [userType, setUserType] = useState(null);
   const [userName, setUserName] = useState("");
+  const [showCustomerProfile, setShowCustomerProfile] = useState(false);
 
   useEffect(() => {
     // Get user info from localStorage
@@ -77,7 +78,10 @@ function Dashboard() {
         <header className="dashboard-header">
           <div className="header-content">
             <div className="user-info">
-              <FaUserCircle className="user-avatar" />
+              <FaUserCircle 
+                className="user-avatar clickable-avatar" 
+                onClick={() => setShowCustomerProfile(true)}
+              />
               <div>
                 <h2>{t("welcomeBack")}</h2>
                 <p className="user-name">{userName}</p>
@@ -94,7 +98,12 @@ function Dashboard() {
       )}
 
       {userType === "customer" ? (
-        <CustomerDashboard t={t} />
+        <CustomerDashboard 
+          t={t} 
+          userName={userName} 
+          showProfile={showCustomerProfile}
+          setShowProfile={setShowCustomerProfile}
+        />
       ) : (
         <ProviderDashboard
           t={t}
@@ -107,7 +116,7 @@ function Dashboard() {
 }
 
 // Customer Dashboard Component
-function CustomerDashboard({ t }) {
+function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedRating, setSelectedRating] = useState("all");
@@ -149,6 +158,13 @@ function CustomerDashboard({ t }) {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewError, setReviewError] = useState('');
   
+  const [savedProviders, setSavedProviders] = useState([]);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: userName || "",
+    phone: "",
+    email: "",
+  });
   const providersPerPage = 6;
 
   const categories = ["All", "Plumbing", "Electrical", "Carpentry", "Cleaning", "Painting", "Gardening"];
@@ -160,26 +176,53 @@ function CustomerDashboard({ t }) {
     { label: "3.5+ Stars", value: "3.5" },
   ];
 
-  // [Error] Filter providers based on search and filters
-  const filtered_Providers = providers.filter((provider) => {
-    const matchesSearch =
-      provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      provider.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      provider.description.toLowerCase().includes(searchQuery.toLowerCase());
+  // Fetch customer profile on mount
+  useEffect(() => {
+    console.log("showProfile changed:", showProfile);
+    if (showProfile) {
+      setIsEditingProfile(false); // Reset to view mode when opening
+      fetchCustomerProfile();
+    }
+  }, [showProfile]);
 
-    const matchesCategory =
-      selectedCategory === "all" ||
-      provider.service.toLowerCase() === selectedCategory.toLowerCase();
+  const fetchCustomerProfile = async () => {
+    try {
+      const profile = await api.getCustomerProfile();
+      setProfileData({
+        name: profile.name || "",
+        phone: profile.phone_number || "",
+        email: profile.email_id || "",
+      });
+    } catch (error) {
+      console.error("Error fetching customer profile:", error);
+      // If profile doesn't exist, keep default empty values
+    }
+  };
 
-    const matchesRating =
-      selectedRating === "all" || provider.rating >= parseFloat(selectedRating);
+  const handleSaveProfile = async () => {
+    try {
+      const updateData = {
+        name: profileData.name,
+        phone_number: profileData.phone,
+        email_id: profileData.email,
+      };
 
-    const matchesLocation =
-      selectedLocation === "all" ||
-      provider.location.toLowerCase() === selectedLocation.toLowerCase();
+      await api.updateCustomerProfile(updateData);
+      setIsEditingProfile(false);
+      alert("Profile updated successfully!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Failed to save profile. Please try again.");
+    }
+  };
 
-    return matchesSearch && matchesCategory && matchesRating && matchesLocation;
-  });
+  const handleProfileChange = (field, value) => {
+    setProfileData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
   // Fetch stats and providers on mount
   useEffect(() => {
     const fetchData = async () => {
@@ -883,6 +926,131 @@ function CustomerDashboard({ t }) {
         </div>
       )}
 
+      {/* Profile Modal */}
+      {showProfile && (
+        <div className="modal-overlay" onClick={() => setShowProfile(false)}>
+          <div
+            className="modal-content profile-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3>
+                <FaUserCircle style={{ marginRight: "0.5rem" }} />
+                {t("common.profile")}
+              </h3>
+              <button
+                className="modal-close-btn"
+                onClick={() => setShowProfile(false)}
+              >
+                <FaTimes />
+              </button>
+            </div>
+            <div className="modal-body profile-body">
+              {!isEditingProfile ? (
+                /* View Mode - READ ONLY */
+                <div className="profile-view">
+                  <div className="profile-avatar-section">
+                    <FaUserCircle className="profile-avatar-large" />
+                    <h2>{profileData.name}</h2>
+                  </div>
+
+                  <div className="profile-info-grid">
+                    <div className="profile-info-item">
+                      <FaEnvelope className="profile-icon" />
+                      <div>
+                        <label>Email</label>
+                        <p>{profileData.email || "Not provided"}</p>
+                      </div>
+                    </div>
+
+                    <div className="profile-info-item">
+                      <FaPhone className="profile-icon" />
+                      <div>
+                        <label>Phone</label>
+                        <p>{profileData.phone}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="profile-actions">
+                    <button
+                      className="edit-profile-btn"
+                      onClick={() => setIsEditingProfile(true)}
+                    >
+                      <FaEdit /> Edit Profile
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Edit Mode - EDITABLE */
+                <div className="profile-edit">
+                  <div className="profile-avatar-section">
+                    <FaUserCircle className="profile-avatar-large" />
+                    <h2>Edit Profile</h2>
+                  </div>
+
+                  <div className="profile-form">
+                    <div className="form-group">
+                      <label>
+                        <FaUser className="form-icon" /> Name
+                      </label>
+                      <input
+                        type="text"
+                        value={profileData.name}
+                        onChange={(e) => handleProfileChange("name", e.target.value)}
+                        placeholder="Enter your name"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>
+                        <FaPhone className="form-icon" /> Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={profileData.phone}
+                        onChange={(e) => handleProfileChange("phone", e.target.value)}
+                        placeholder="Enter your phone number"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>
+                        <FaEnvelope className="form-icon" /> Email
+                      </label>
+                      <input
+                        type="email"
+                        value={profileData.email}
+                        onChange={(e) => handleProfileChange("email", e.target.value)}
+                        placeholder="Enter your email"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="profile-actions">
+                    <button
+                      className="cancel-edit-btn"
+                      onClick={() => {
+                        setIsEditingProfile(false);
+                        fetchCustomerProfile();
+                      }}
+                    >
+                      <FaTimes /> Cancel
+                    </button>
+                    <button
+                      className="save-profile-btn"
+                      onClick={handleSaveProfile}
+                    >
+                      <FaSave /> Save Changes
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Booking Details Modal */}
       {showBookingDetails && selectedBooking && (
         <div className="modal-overlay" onClick={() => setShowBookingDetails(false)}>
@@ -1126,7 +1294,7 @@ function CustomerDashboard({ t }) {
     </div>
   );
 }
-
+      
 // Provider Dashboard Component
 function ProviderDashboard({ t, userName, handleLogout }) {
   const [showAcceptedJobs, setShowAcceptedJobs] = useState(false);
