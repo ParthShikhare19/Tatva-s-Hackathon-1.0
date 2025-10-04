@@ -21,11 +21,14 @@ class ProviderProfileCreate(BaseModel):
     location_name: Optional[str] = Field(None, max_length=255, description="Provider location")
 
 class ProviderProfileUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=100, description="User's name")
     bio: Optional[str] = Field(None, max_length=1000, description="Provider biography")
     location_name: Optional[str] = Field(None, max_length=255, description="Provider location")
 
 class ProviderProfileResponse(BaseModel):
     user_id: int
+    name: str  # User's name
+    phone_number: str  # User's phone number
     bio: Optional[str]
     location_name: Optional[str]
     average_rating: Decimal
@@ -102,7 +105,20 @@ def update_provider_profile(
             detail="Provider profile not found. Use POST /providers/profile to create one."
         )
     
-    # Update only provided fields
+    # Query user from current session (important to avoid session errors)
+    user = db.query(User).filter(User.id == current_user.id).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Update user name if provided
+    if profile_data.name is not None:
+        user.name = profile_data.name
+    
+    # Update provider fields if provided
     if profile_data.bio is not None:
         provider.bio = profile_data.bio
     if profile_data.location_name is not None:
@@ -110,8 +126,19 @@ def update_provider_profile(
     
     db.commit()
     db.refresh(provider)
+    db.refresh(user)
     
-    return provider
+    # Return combined user and provider data
+    return ProviderProfileResponse(
+        user_id=provider.user_id,
+        name=user.name,
+        phone_number=user.phone_number,
+        bio=provider.bio,
+        location_name=provider.location_name,
+        average_rating=provider.average_rating,
+        jobs_completed=provider.jobs_completed,
+        is_verified=provider.is_verified
+    )
 
 @router.get("/profile", response_model=ProviderProfileResponse)
 def get_my_provider_profile(
@@ -135,7 +162,17 @@ def get_my_provider_profile(
             detail="Provider profile not found"
         )
     
-    return provider
+    # Combine user and provider data
+    return ProviderProfileResponse(
+        user_id=provider.user_id,
+        name=current_user.name,
+        phone_number=current_user.phone_number,
+        bio=provider.bio,
+        location_name=provider.location_name,
+        average_rating=provider.average_rating,
+        jobs_completed=provider.jobs_completed,
+        is_verified=provider.is_verified
+    )
 
 @router.get("/profile/{provider_id}", response_model=ProviderProfileResponse)
 def get_provider_profile_by_id(

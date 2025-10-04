@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import api from "../services/api";
 import {
   FaUserCircle,
   FaSearch,
@@ -20,6 +21,12 @@ import {
   FaCheck,
   FaTimes,
   FaUser,
+  FaEdit,
+  FaSave,
+  FaEnvelope,
+  FaPhone,
+  FaHome,
+  FaBriefcase,
 } from "react-icons/fa";
 import "../styles/Dashboard.css";
 
@@ -463,6 +470,48 @@ function CustomerDashboard({ t }) {
 // Provider Dashboard Component
 function ProviderDashboard({ t, userName, handleLogout }) {
   const [showAcceptedJobs, setShowAcceptedJobs] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  // Profile data
+  const [profileData, setProfileData] = useState({
+    name: userName || "Provider Name",
+    email: "provider@example.com",
+    phone: "+91 9876543210",
+    address: "Mumbai, Maharashtra",
+    specialization: "Plumbing, Electrical",
+    experience: "5 years",
+    bio: "Professional service provider with expertise in multiple domains.",
+  });
+
+  // Temporary state for editing
+  const [editedProfile, setEditedProfile] = useState({ ...profileData });
+
+  // Fetch profile data on component mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await api.getProviderProfile();
+        setProfileData({
+          name: data.name || userName || "Provider Name",
+          email: "provider@example.com", // Not in backend yet
+          phone: data.phone_number || "+91 9876543210",
+          address: data.location_name || "Mumbai, Maharashtra",
+          specialization: "Plumbing, Electrical", // Not in backend yet
+          experience: "5 years", // Not in backend yet
+          bio: data.bio || "Professional service provider with expertise in multiple domains.",
+        });
+        setLoadingProfile(false);
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        setLoadingProfile(false);
+        // If profile doesn't exist, we'll use default values
+      }
+    };
+
+    fetchProfile();
+  }, [userName]);
 
   // New requests waiting for accept/reject
   const [workRequests, setWorkRequests] = useState([
@@ -565,12 +614,105 @@ function ProviderDashboard({ t, userName, handleLogout }) {
     setShowAcceptedJobs(false);
   };
 
+  const handleShowProfile = () => {
+    setShowProfile(true);
+    setIsEditingProfile(false);
+    setEditedProfile({ ...profileData });
+  };
+
+  const handleCloseProfile = () => {
+    setShowProfile(false);
+    setIsEditingProfile(false);
+    setEditedProfile({ ...profileData });
+  };
+
+  const handleEditProfile = () => {
+    setIsEditingProfile(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false);
+    setEditedProfile({ ...profileData });
+  };
+
+  const handleProfileChange = (field, value) => {
+    setEditedProfile((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      // Prepare data for backend (only fields that exist in backend)
+      const updateData = {
+        name: editedProfile.name,
+        bio: editedProfile.bio,
+        location_name: editedProfile.address,
+      };
+
+      // Try to update existing profile
+      const updatedProfile = await api.updateProviderProfile(updateData);
+      
+      // Update local state with response from backend
+      setProfileData({
+        name: updatedProfile.name,
+        email: profileData.email, // Keep existing (not in backend)
+        phone: updatedProfile.phone_number,
+        address: updatedProfile.location_name,
+        specialization: profileData.specialization, // Keep existing (not in backend)
+        experience: profileData.experience, // Keep existing (not in backend)
+        bio: updatedProfile.bio,
+      });
+      
+      setIsEditingProfile(false);
+      console.log("Profile updated successfully:", updatedProfile);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      
+      // If profile doesn't exist (404), try to create it
+      if (error.message.includes("404") || error.message.includes("not found")) {
+        try {
+          const createData = {
+            bio: editedProfile.bio,
+            location_name: editedProfile.address,
+          };
+          
+          const newProfile = await api.createProviderProfile(createData);
+          
+          // Update local state with new profile
+          setProfileData({
+            name: userName,
+            email: profileData.email,
+            phone: newProfile.phone_number,
+            address: newProfile.location_name,
+            specialization: profileData.specialization,
+            experience: profileData.experience,
+            bio: newProfile.bio,
+          });
+          
+          setIsEditingProfile(false);
+          console.log("Profile created successfully:", newProfile);
+        } catch (createError) {
+          console.error("Error creating profile:", createError);
+          alert("Failed to save profile. Please try again.");
+        }
+      } else {
+        alert("Failed to save profile. Please try again.");
+      }
+    }
+  };
+
   return (
     <div className="dashboard-page">
       {/* Provider Header - Same style as Customer */}
       <header className="dashboard-header">
         <div className="header-content">
-          <div className="user-info">
+          <div
+            className="user-info"
+            onClick={handleShowProfile}
+            style={{ cursor: "pointer" }}
+          >
             <FaUserCircle className="user-avatar" />
             <div>
               <h2>{t("welcomeBack")}</h2>
@@ -763,6 +905,218 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                     <p className="empty-subtitle">
                       {t("dashboard.provider.jobsYouAccept")}
                     </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Profile Modal */}
+        {showProfile && (
+          <div className="modal-overlay" onClick={handleCloseProfile}>
+            <div
+              className="modal-content profile-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3>
+                  <FaUserCircle style={{ marginRight: "0.5rem" }} />
+                  {t("common.profile")}
+                </h3>
+                <button
+                  className="modal-close-btn"
+                  onClick={handleCloseProfile}
+                >
+                  <FaTimes />
+                </button>
+              </div>
+              <div className="modal-body profile-body">
+                {!isEditingProfile ? (
+                  /* View Mode */
+                  <div className="profile-view">
+                    <div className="profile-avatar-section">
+                      <FaUserCircle className="profile-avatar-large" />
+                      <h2>{profileData.name}</h2>
+                    </div>
+
+                    <div className="profile-info-grid">
+                      <div className="profile-info-item">
+                        <FaEnvelope className="profile-icon" />
+                        <div>
+                          <label>Email</label>
+                          <p>{profileData.email}</p>
+                        </div>
+                      </div>
+
+                      <div className="profile-info-item">
+                        <FaPhone className="profile-icon" />
+                        <div>
+                          <label>Phone</label>
+                          <p>{profileData.phone}</p>
+                        </div>
+                      </div>
+
+                      <div className="profile-info-item">
+                        <FaHome className="profile-icon" />
+                        <div>
+                          <label>Address</label>
+                          <p>{profileData.address}</p>
+                        </div>
+                      </div>
+
+                      <div className="profile-info-item">
+                        <FaTools className="profile-icon" />
+                        <div>
+                          <label>Specialization</label>
+                          <p>{profileData.specialization}</p>
+                        </div>
+                      </div>
+
+                      <div className="profile-info-item">
+                        <FaBriefcase className="profile-icon" />
+                        <div>
+                          <label>Experience</label>
+                          <p>{profileData.experience}</p>
+                        </div>
+                      </div>
+
+                      <div className="profile-info-item full-width">
+                        <FaClipboardList className="profile-icon" />
+                        <div>
+                          <label>Bio</label>
+                          <p>{profileData.bio}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="profile-actions">
+                      <button
+                        className="edit-profile-btn"
+                        onClick={handleEditProfile}
+                      >
+                        <FaEdit /> Edit Profile
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Edit Mode */
+                  <div className="profile-edit">
+                    <div className="profile-avatar-section">
+                      <FaUserCircle className="profile-avatar-large" />
+                      <h2>Edit Profile</h2>
+                    </div>
+
+                    <div className="profile-form">
+                      <div className="form-group">
+                        <label>
+                          <FaUser className="form-icon" /> Name
+                        </label>
+                        <input
+                          type="text"
+                          value={editedProfile.name}
+                          onChange={(e) =>
+                            handleProfileChange("name", e.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>
+                          <FaEnvelope className="form-icon" /> Email
+                        </label>
+                        <input
+                          type="email"
+                          value={editedProfile.email}
+                          onChange={(e) =>
+                            handleProfileChange("email", e.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>
+                          <FaPhone className="form-icon" /> Phone
+                        </label>
+                        <input
+                          type="tel"
+                          value={editedProfile.phone}
+                          onChange={(e) =>
+                            handleProfileChange("phone", e.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>
+                          <FaHome className="form-icon" /> Address
+                        </label>
+                        <input
+                          type="text"
+                          value={editedProfile.address}
+                          onChange={(e) =>
+                            handleProfileChange("address", e.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>
+                          <FaTools className="form-icon" /> Specialization
+                        </label>
+                        <input
+                          type="text"
+                          value={editedProfile.specialization}
+                          onChange={(e) =>
+                            handleProfileChange(
+                              "specialization",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>
+                          <FaBriefcase className="form-icon" /> Experience
+                        </label>
+                        <input
+                          type="text"
+                          value={editedProfile.experience}
+                          onChange={(e) =>
+                            handleProfileChange("experience", e.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="form-group full-width">
+                        <label>
+                          <FaClipboardList className="form-icon" /> Bio
+                        </label>
+                        <textarea
+                          rows="4"
+                          value={editedProfile.bio}
+                          onChange={(e) =>
+                            handleProfileChange("bio", e.target.value)
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="profile-actions">
+                      <button
+                        className="save-profile-btn"
+                        onClick={handleSaveProfile}
+                      >
+                        <FaSave /> Save Changes
+                      </button>
+                      <button
+                        className="cancel-edit-btn"
+                        onClick={handleCancelEdit}
+                      >
+                        <FaTimes /> Cancel
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

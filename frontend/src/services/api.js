@@ -52,6 +52,25 @@ class ApiService {
     return this.request('/auth/me');
   }
 
+  // Provider profile endpoints
+  async getProviderProfile() {
+    return this.request('/providers/profile');
+  }
+
+  async updateProviderProfile(profileData) {
+    return this.request('/providers/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  }
+
+  async createProviderProfile(profileData) {
+    return this.request('/providers/profile', {
+      method: 'POST',
+      body: JSON.stringify(profileData),
+    });
+  }
+
   // Token management
   setAuthToken(token) {
     localStorage.setItem('authToken', token);
