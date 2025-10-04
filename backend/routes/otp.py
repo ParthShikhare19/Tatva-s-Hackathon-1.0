@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
-from ..Database_connection.db import get_db
-from ..models.otp import OTPVerification
-from ..utils.otp_service import (
+from Database_connection.db import get_db
+from models.otp import OTPVerification
+from utils.otp_service import (
     generate_otp, 
     send_otp as send_otp_message,  # Renamed to avoid conflict with route function
     get_otp_expiry,

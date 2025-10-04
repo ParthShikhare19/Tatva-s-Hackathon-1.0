@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta
-from ..Database_connection.db import Base
+from Database_connection.db import Base
 
 class JobCode(Base):
     __tablename__ = "job_codes"

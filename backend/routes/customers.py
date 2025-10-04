@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from ..Database_connection.db import get_db
-from ..models.customers import Customer
+from Database_connection.db import get_db
+from models.customers import Customer
 from pydantic import BaseModel, Field
 from typing import Optional
 
