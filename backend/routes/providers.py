@@ -23,18 +23,23 @@ router = APIRouter(prefix="/providers", tags=["Providers"])
 class ProviderProfileCreate(BaseModel):
     bio: Optional[str] = Field(None, max_length=1000, description="Provider biography")
     location_name: Optional[str] = Field(None, max_length=255, description="Provider location")
-    service_type: Optional[str] = Field(None, max_length=100, description="Service type")
+    years_of_experience: Optional[int] = Field(None, description="Years of experience")
 
 class ProviderProfileUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=100, description="User's name")
+    email_id: Optional[str] = Field(None, max_length=255, description="User's email")
     bio: Optional[str] = Field(None, max_length=1000, description="Provider biography")
     location_name: Optional[str] = Field(None, max_length=255, description="Provider location")
-    service_type: Optional[str] = Field(None, max_length=100, description="Service type")
+    years_of_experience: Optional[int] = Field(None, description="Years of experience")
 
 class ProviderProfileResponse(BaseModel):
     user_id: int
+    name: str  # User's name
+    phone_number: str  # User's phone number
+    email_id: Optional[str]  # User's email
     bio: Optional[str]
     location_name: Optional[str]
-    service_type: Optional[str]
+    years_of_experience: Optional[int]  # Years of experience
     average_rating: Decimal
     jobs_completed: int
     total_earnings: float
@@ -107,9 +112,7 @@ def create_provider_profile(
         user_id=current_user.id,
         bio=profile_data.bio,
         location_name=profile_data.location_name,
-        service_type=profile_data.service_type,
-        phone=current_user.phone_number,
-        email=f"{current_user.name.lower().replace(' ', '.')}@example.com",
+        years_of_experience=profile_data.years_of_experience,
         average_rating=Decimal("0.0"),
         jobs_completed=0,
         total_earnings=0.0,
@@ -119,8 +122,19 @@ def create_provider_profile(
     db.add(new_provider)
     db.commit()
     db.refresh(new_provider)
-
-    return new_provider
+    
+    return ProviderProfileResponse(
+        user_id=new_provider.user_id,
+        name=current_user.name,
+        phone_number=current_user.phone_number,
+        email_id=current_user.email_id,
+        bio=new_provider.bio,
+        location_name=new_provider.location_name,
+        years_of_experience=new_provider.years_of_experience,
+        average_rating=new_provider.average_rating,
+        jobs_completed=new_provider.jobs_completed,
+        is_verified=new_provider.is_verified
+    )
 
 # Dashboard Routes with Real Data
 @router.get("/{provider_id}/dashboard-stats", response_model=DashboardStats)
@@ -148,36 +162,47 @@ def get_provider_dashboard_stats(
         db.commit()
         db.refresh(provider)
     
-    # Real data queries
-    active_jobs_count = db.query(Job).filter(
-        Job.provider_id == provider.user_id,
-        Job.status.in_(["accepted", "in_progress"])
-    ).count()
+    # Query user from current session (important to avoid session errors)
+    user = db.query(User).filter(User.id == current_user.id).first()
     
-    pending_requests_count = db.query(Job).filter(
-        Job.status == "pending",
-        Job.provider_id.is_(None)
-    ).count()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
     
-    # Calculate total earnings from completed jobs
-    from sqlalchemy import func
-    total_earnings = db.query(func.sum(Job.price)).filter(
-        Job.provider_id == provider.user_id,
-        Job.status == "completed"
-    ).scalar() or 0.0
+    # Update user name if provided
+    if profile_data.name is not None:
+        user.name = profile_data.name
     
-    return DashboardStats(
-        total_earnings=float(total_earnings),
+    # Update user email if provided
+    if profile_data.email_id is not None:
+        user.email_id = profile_data.email_id
+    
+    # Update provider fields if provided
+    if profile_data.bio is not None:
+        provider.bio = profile_data.bio
+    if profile_data.location_name is not None:
+        provider.location_name = profile_data.location_name
+    if profile_data.years_of_experience is not None:
+        provider.years_of_experience = profile_data.years_of_experience
+    
+    db.commit()
+    db.refresh(provider)
+    db.refresh(user)
+    
+    # Return combined user and provider data
+    return ProviderProfileResponse(
+        user_id=provider.user_id,
+        name=user.name,
+        phone_number=user.phone_number,
+        email_id=user.email_id,
+        bio=provider.bio,
+        location_name=provider.location_name,
+        years_of_experience=provider.years_of_experience,
+        average_rating=provider.average_rating,
         jobs_completed=provider.jobs_completed,
-        average_rating=float(provider.average_rating),
-        active_jobs=active_jobs_count,
-        pending_requests=pending_requests_count,
-        service_type=None,  # Not in database
-        phone=current_user.phone_number,
-        email=f"{current_user.name.lower().replace(' ', '.')}@example.com",  # Generate from name
-        is_verified=provider.is_verified,
-        member_since=current_user.created_at,
-        bio=provider.bio
+        is_verified=provider.is_verified
     )
 
 @router.get("/{provider_id}/pending-requests", response_model=List[JobRequest])
@@ -214,7 +239,19 @@ def get_pending_requests(
             created_at=job.created_at
         ))
     
-    return job_requests
+    # Combine user and provider data
+    return ProviderProfileResponse(
+        user_id=provider.user_id,
+        name=current_user.name,
+        phone_number=current_user.phone_number,
+        email_id=current_user.email_id,
+        bio=provider.bio,
+        location_name=provider.location_name,
+        years_of_experience=provider.years_of_experience,
+        average_rating=provider.average_rating,
+        jobs_completed=provider.jobs_completed,
+        is_verified=provider.is_verified
+    )
 
 @router.get("/{provider_id}/accepted-jobs", response_model=List[JobResponse])
 def get_accepted_jobs(
@@ -268,36 +305,29 @@ def get_completed_jobs(
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
     
-    # Real query for completed jobs
-    # Note: Reviews are linked by provider_id and customer_id, not by job
-    jobs = db.query(Job).join(User, Job.customer_id == User.id)\
-        .filter(Job.provider_id == provider.user_id)\
-        .filter(Job.status == "completed")\
-        .order_by(Job.completed_at.desc())\
-        .all()
+    # Get user data
+    user = db.query(User).filter(User.id == provider.user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
     
-    job_responses = []
-    for job in jobs:
-        # Reviews are matched by provider and customer, not by specific job
-        # job_code in reviews is an OTP code, not a job identifier
-        job_responses.append(JobResponse(
-            id=job.id,
-            title=job.title,
-            description=job.description,
-            price=job.price,
-            location=job.location,
-            customer_name=job.customer.name,
-            customer_phone=job.customer.phone_number,
-            status=job.status,
-            urgency=job.urgency,
-            created_at=job.created_at,
-            accepted_at=job.accepted_at,
-            completed_at=job.completed_at,
-            rating=None,  # Reviews not directly linked to jobs
-            review=None   # Reviews not directly linked to jobs
-        ))
-    
-    return job_responses
+    # Return combined user and provider data
+    return ProviderProfileResponse(
+        user_id=provider.user_id,
+        name=user.name,
+        phone_number=user.phone_number,
+        email_id=user.email_id,
+        bio=provider.bio,
+        location_name=provider.location_name,
+        years_of_experience=provider.years_of_experience,
+        # bio=provider.bio,
+        # location_name=provider.location_name,
+        average_rating=provider.average_rating,
+        jobs_completed=provider.jobs_completed,
+        is_verified=provider.is_verified
+    )
 
 # Job Action Endpoints with Real Database Operations
 @router.post("/jobs/{job_id}/accept")

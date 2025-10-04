@@ -1,19 +1,23 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Text, Float, DateTime
 from sqlalchemy.orm import relationship
-from Database_connection.db import Base
-from datetime import datetime
+from datetime import datetime, timezone
+from sqlalchemy.sql import func
+from backend.Database_connection.db import Base
+
 
 class Review(Base):
     __tablename__ = "reviews"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    provider_id = Column(Integer, ForeignKey("providers.user_id"), nullable=False)
-    customer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    job_code = Column(String(10), nullable=False)  # OTP verification code, not a job ID
-    rating = Column(Integer, nullable=False)  # 1-5 stars
-    comment = Column(Text)  # Column name is 'comment', not 'review_text'
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
+    provider_id = Column(Integer, nullable=False, index=True)  # FK to users.id
+    customer_id = Column(Integer, nullable=False, index=True)  # FK to users.id
+    booking_id = Column(Integer, nullable=True, index=True)  # Link to booking
+    job_code = Column(String(20), nullable=True, index=True)  # Legacy field, kept for compatibility
+    rating = Column(Float, nullable=False)  # 1.0 to 5.0 (stored as numeric in DB)
+    comment = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
     # Relationships
-    provider = relationship("Provider", foreign_keys=[provider_id])
-    customer = relationship("auth.models.User", foreign_keys=[customer_id])
+    # provider = relationship("User", foreign_keys=[provider_phone])
+    # customer = relationship("User", foreign_keys=[customer_phone])
+    # booking = relationship("Booking", back_populates="review")

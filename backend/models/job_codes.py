@@ -1,6 +1,9 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
 from Database_connection.db import Base
 
 class JobCode(Base):

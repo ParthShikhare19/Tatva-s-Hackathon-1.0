@@ -1,6 +1,6 @@
 import random
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from models.job_codes import JobCode
 
@@ -17,7 +17,7 @@ def generate_unique_code(db: Session, length: int = 6) -> str:
         existing_code = db.query(JobCode).filter(
             JobCode.code == code,
             JobCode.status == "UNUSED",
-            JobCode.expires_at > datetime.utcnow()
+            JobCode.expires_at > datetime.now(timezone.utc)
         ).first()
         
         if not existing_code:
@@ -29,7 +29,7 @@ def create_job_code(db: Session, provider_id: int) -> JobCode:
     Code expires in 7 days from creation.
     """
     code = generate_unique_code(db)
-    expires_at = datetime.utcnow() + timedelta(days=7)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
     
     job_code = JobCode(
         code=code,
@@ -52,12 +52,12 @@ def validate_and_use_code(db: Session, code: str) -> JobCode:
     job_code = db.query(JobCode).filter(
         JobCode.code == code,
         JobCode.status == "UNUSED",
-        JobCode.expires_at > datetime.utcnow()
+        JobCode.expires_at > datetime.now(timezone.utc)
     ).first()
     
     if job_code:
         job_code.status = "USED"
-        job_code.used_at = datetime.utcnow()
+        job_code.used_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(job_code)
     

@@ -81,7 +81,7 @@ const Landing = () => {
             <p>{t('customer')}</p>
           </div>
           
-          <div className="action-card provider-card" onClick={() => navigate('/signup/provider')}>
+          <div className="action-card customer-card" onClick={() => navigate('/signup/provider')}>
             <div className="card-icon"><FaTools /></div>
             <h2>{t('provideService')}</h2>
             <p>{t('provider')}</p>

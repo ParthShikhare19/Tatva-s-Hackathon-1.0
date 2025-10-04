@@ -34,11 +34,15 @@ class AuthService:
         self.db.commit()
         self.db.refresh(new_user)
         
+        # Create provider profile if user_type is provider
         if user_data.user_type == "provider":
+            # Import here to avoid circular imports
+            from ..models.providers import Provider
+            
             provider = Provider(
                 user_id=new_user.id,
                 location_name=user_data.location,
-                bio=f"Experienced {user_data.service} in {user_data.location}"
+                bio=f"Experienced {user_data.service} in {user_data.location}" if user_data.service and user_data.location else None
             )
             self.db.add(provider)
             self.db.commit()
