@@ -869,13 +869,6 @@ function ProviderDashboard({ t, userName, handleLogout }) {
       </header>
 
       <div className="dashboard-content">
-        {/* Welcome Message */}
-        <section className="welcome-section">
-          <h3>
-            {t("common.welcome")} {userName}
-          </h3>
-        </section>
-
         {/* Stats Cards */}
         <div className="stats-grid">
           <div className="stat-card">
