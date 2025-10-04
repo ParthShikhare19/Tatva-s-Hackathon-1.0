@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import api from "../services/api";
+import ProviderProfileModal from "../components/ProviderProfileModal";
 import {
   FaUserCircle,
   FaSearch,
@@ -30,6 +31,7 @@ import {
   FaBookmark,
   FaRegBookmark,
 } from "react-icons/fa";
+import ApiService from "../services/api";
 import "../styles/Dashboard.css";
 
 function Dashboard() {
@@ -111,96 +113,45 @@ function CustomerDashboard({ t }) {
   const [selectedRating, setSelectedRating] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [providers, setProviders] = useState([]);
+  const [stats, setStats] = useState({ 
+    active_bookings: 0, 
+    booking_history: 0, 
+    saved_providers: 0,
+    pending_bookings: 0,
+    accepted_bookings: 0,
+    completed_bookings: 0,
+    cancelled_bookings: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedProvider, setSelectedProvider] = useState(null);
+  const [showProviderModal, setShowProviderModal] = useState(false);
+  const [showActiveBookings, setShowActiveBookings] = useState(false);
+  const [showBookingHistory, setShowBookingHistory] = useState(false);
   const [showSavedProviders, setShowSavedProviders] = useState(false);
-  const [savedProviders, setSavedProviders] = useState([]);
+  const [activeBookingsList, setActiveBookingsList] = useState([]);
+  const [bookingHistoryList, setBookingHistoryList] = useState([]);
+  const [savedProvidersList, setSavedProvidersList] = useState([]);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [showBookingDetails, setShowBookingDetails] = useState(false);
+  
+  // Acceptance code validation modal states
+  const [showAcceptanceModal, setShowAcceptanceModal] = useState(false);
+  const [acceptanceCodeInput, setAcceptanceCodeInput] = useState('');
+  const [acceptanceValidationError, setAcceptanceValidationError] = useState('');
+  
+  // Completion and Review modal states (combined)
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [completionCodeInput, setCompletionCodeInput] = useState('');
+  const [rating, setRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewError, setReviewError] = useState('');
+  
   const providersPerPage = 6;
 
-  // Sample provider data
-  const [providers, setProviders] = useState([
-    {
-      id: 1,
-      name: "Rajesh Kumar",
-      service: "Plumbing",
-      description: "Expert in all plumbing works with 10+ years experience",
-      rating: 4.5,
-      location: "Mumbai",
-      reviews: 45,
-    },
-    {
-      id: 2,
-      name: "Amit Sharma",
-      service: "Electrical",
-      description: "Licensed electrician specializing in home wiring",
-      rating: 4.8,
-      location: "Delhi",
-      reviews: 62,
-    },
-    {
-      id: 3,
-      name: "Priya Patel",
-      service: "Cleaning",
-      description: "Professional cleaning services for homes and offices",
-      rating: 4.6,
-      location: "Pune",
-      reviews: 38,
-    },
-    {
-      id: 4,
-      name: "Suresh Reddy",
-      service: "Carpentry",
-      description: "Custom furniture and woodwork specialist",
-      rating: 4.7,
-      location: "Bangalore",
-      reviews: 51,
-    },
-    {
-      id: 5,
-      name: "Neha Singh",
-      service: "Painting",
-      description: "Interior and exterior painting with quality finish",
-      rating: 4.4,
-      location: "Mumbai",
-      reviews: 29,
-    },
-    {
-      id: 6,
-      name: "Vikram Joshi",
-      service: "Gardening",
-      description: "Landscaping and garden maintenance expert",
-      rating: 4.9,
-      location: "Pune",
-      reviews: 73,
-    },
-    {
-      id: 7,
-      name: "Anita Desai",
-      service: "Plumbing",
-      description: "Quick and reliable plumbing repairs",
-      rating: 4.3,
-      location: "Delhi",
-      reviews: 34,
-    },
-    {
-      id: 8,
-      name: "Rahul Mehta",
-      service: "Electrical",
-      description: "24/7 emergency electrical services",
-      rating: 4.6,
-      location: "Bangalore",
-      reviews: 48,
-    },
-  ]);
-
-  const categories = [
-    "All",
-    "Plumbing",
-    "Electrical",
-    "Carpentry",
-    "Cleaning",
-    "Painting",
-    "Gardening",
-  ];
+  const categories = ["All", "Plumbing", "Electrical", "Carpentry", "Cleaning", "Painting", "Gardening"];
   const locations = ["All", "Mumbai", "Delhi", "Pune", "Bangalore"];
   const ratings = [
     { label: "All Ratings", value: "all" },
@@ -209,8 +160,8 @@ function CustomerDashboard({ t }) {
     { label: "3.5+ Stars", value: "3.5" },
   ];
 
-  // Filter providers based on search and filters
-  const filteredProviders = providers.filter((provider) => {
+  // [Error] Filter providers based on search and filters
+  const filtered_Providers = providers.filter((provider) => {
     const matchesSearch =
       provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       provider.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -229,8 +180,71 @@ function CustomerDashboard({ t }) {
 
     return matchesSearch && matchesCategory && matchesRating && matchesLocation;
   });
+  // Fetch stats and providers on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Check if authenticated before making requests
+        if (!ApiService.isAuthenticated()) {
+          setError('Please log in to view providers');
+          setLoading(false);
+          return;
+        }
+        
+        const [statsData, providersData] = await Promise.all([
+          ApiService.getCustomerStats(),
+          ApiService.getProviders({ limit: 50 })
+        ]);
+        setStats(statsData);
+        setProviders(providersData || []);
+      } catch (err) {
+        const errorMessage = err.message || 'Failed to fetch data';
+        setError(errorMessage);
+        console.error('Error fetching dashboard data:', err);
+        
+        // If authentication error, redirect to login
+        if (errorMessage.includes('401') || errorMessage.includes('authenticated') || errorMessage.includes('token')) {
+          setTimeout(() => {
+            localStorage.clear();
+            window.location.href = '/signin';
+          }, 2000);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
-  // Pagination
+  // Refetch providers when filters change
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        const filters = {};
+        if (searchQuery) filters.search = searchQuery;
+        if (selectedCategory !== 'all') filters.service = selectedCategory;
+        if (selectedLocation !== 'all') filters.location = selectedLocation;
+        if (selectedRating !== 'all') filters.min_rating = parseFloat(selectedRating);
+        
+        const data = await ApiService.getProviders(filters);
+        setProviders(data);
+      } catch (err) {
+        console.error('Error fetching providers:', err);
+      }
+    };
+    
+    const timeoutId = setTimeout(() => {
+      fetchProviders();
+    }, 300); // Debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, selectedCategory, selectedLocation, selectedRating]);
+
+  // Pagination - now works directly on providers from backend
+  const filteredProviders = providers; // Backend already filtered
   const indexOfLastProvider = currentPage * providersPerPage;
   const indexOfFirstProvider = indexOfLastProvider - providersPerPage;
   const currentProviders = filteredProviders.slice(
@@ -249,61 +263,237 @@ function CustomerDashboard({ t }) {
     setCurrentPage(1);
   };
 
-  const handleSaveProvider = (provider) => {
-    const isAlreadySaved = savedProviders.some((p) => p.id === provider.id);
-
-    if (isAlreadySaved) {
-      // Remove from saved
-      setSavedProviders((prev) => prev.filter((p) => p.id !== provider.id));
-    } else {
-      // Add to saved
-      setSavedProviders((prev) => [...prev, provider]);
+  const handleSaveProvider = async (providerPhone, isSaved) => {
+    try {
+      if (isSaved) {
+        await ApiService.unsaveProvider(providerPhone);
+      } else {
+        await ApiService.saveProvider(providerPhone);
+      }
+      // Update local state
+      setProviders(providers.map(p => 
+        p.phone === providerPhone ? { ...p, is_saved: !isSaved } : p
+      ));
+      // Update selected provider if modal is open
+      if (selectedProvider && selectedProvider.phone === providerPhone) {
+        setSelectedProvider({ ...selectedProvider, is_saved: !isSaved });
+      }
+      // Refresh stats to update saved providers count
+      try {
+        const updatedStats = await ApiService.getCustomerStats();
+        setStats(updatedStats);
+      } catch (err) {
+        console.error('Error refreshing stats:', err);
+      }
+    } catch (err) {
+      console.error('Error toggling saved provider:', err);
+      alert(err.message || 'Failed to update saved providers');
     }
   };
 
-  const isProviderSaved = (providerId) => {
-    return savedProviders.some((p) => p.id === providerId);
+  const handleOpenProviderModal = (provider) => {
+    setSelectedProvider(provider);
+    setShowProviderModal(true);
   };
 
-  const handleViewSavedProviders = () => {
-    setShowSavedProviders(true);
+  const handleCloseProviderModal = () => {
+    setShowProviderModal(false);
+    setTimeout(() => setSelectedProvider(null), 300);
   };
 
-  const handleCloseSavedProviders = () => {
-    setShowSavedProviders(false);
+  const handleBookProvider = async (bookingData) => {
+    try {
+      const response = await ApiService.createBooking({
+        provider_phone: bookingData.providerPhone,
+        service: bookingData.service,
+        booking_type: bookingData.bookingType,
+        scheduled_date: bookingData.scheduledDate,
+        scheduled_time: bookingData.scheduledTime,
+        description: bookingData.description
+      });
+      
+      // Show success message with booking code
+      const bookingType = bookingData.bookingType === 'immediate' ? 'Immediate' : 'Scheduled';
+      const scheduleInfo = bookingData.bookingType === 'scheduled' 
+        ? `Date: ${bookingData.scheduledDate}\nTime: ${bookingData.scheduledTime}\n` 
+        : '';
+      
+      alert(
+        `✅ Booking Confirmed!\n\n` +
+        `Type: ${bookingType}\n` +
+        `Provider: ${selectedProvider.name}\n` +
+        `Service: ${bookingData.service}\n` +
+        scheduleInfo +
+        `\nBooking Code: ${response.one_time_code}\n\n` +
+        `The provider has been notified. Please save this code for reference.`
+      );
+      
+      // Refresh stats to update active bookings count
+      try {
+        const updatedStats = await ApiService.getCustomerStats();
+        setStats(updatedStats);
+      } catch (err) {
+        console.error('Error refreshing stats:', err);
+      }
+      
+      handleCloseProviderModal();
+    } catch (err) {
+      console.error('Error creating booking:', err);
+      throw err;
+    }
   };
 
-  const handleRemoveSavedProvider = (providerId) => {
-    setSavedProviders((prev) => prev.filter((p) => p.id !== providerId));
-  };
+  // Show error message if there's an authentication or fetch error
+  if (error) {
+    return (
+      <div className="dashboard-content">
+        <div className="error-message" style={{ 
+          padding: '20px', 
+          backgroundColor: '#fee', 
+          color: '#c33', 
+          borderRadius: '8px', 
+          margin: '20px',
+          textAlign: 'center'
+        }}>
+          <h3>Error Loading Dashboard</h3>
+          <p>{error}</p>
+          <p style={{ fontSize: '14px', marginTop: '10px' }}>
+            {error.includes('authenticated') || error.includes('log in') ? 
+              'Redirecting to login...' : 
+              'Please check your connection and try again.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-content">
-      {/* Stats Cards - Now on Top */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <FaCalendarAlt className="stat-icon" />
+      {/* Stats Cards - Now on Top - Clickable - 2x3 Grid */}
+      <div className="stats-grid stats-grid-extended">
+        <div 
+          className="stat-card stat-clickable" 
+          onClick={async () => {
+            try {
+              const bookings = await ApiService.getCustomerBookings('pending');
+              setActiveBookingsList(bookings);
+              setShowActiveBookings(true);
+            } catch (err) {
+              console.error('Error fetching pending bookings:', err);
+              alert('Failed to load pending bookings');
+            }
+          }}
+          title="Click to view pending bookings"
+        >
+          <FaClock className="stat-icon pending-icon" />
           <div className="stat-info">
-            <h4>{t("dashboard.customer.activeBookings")}</h4>
-            <p className="stat-number">0</p>
+            <h4>Pending Bookings</h4>
+            <p className="stat-number">{stats.pending_bookings}</p>
           </div>
         </div>
-        <div className="stat-card">
-          <FaClock className="stat-icon" />
+        
+        <div 
+          className="stat-card stat-clickable" 
+          onClick={async () => {
+            try {
+              const bookings = await ApiService.getCustomerBookings('accepted');
+              setActiveBookingsList(bookings);
+              setShowActiveBookings(true);
+            } catch (err) {
+              console.error('Error fetching accepted bookings:', err);
+              alert('Failed to load accepted bookings');
+            }
+          }}
+          title="Click to view accepted bookings"
+        >
+          <FaCheckCircle className="stat-icon accepted-icon" />
+          <div className="stat-info">
+            <h4>Accepted Bookings</h4>
+            <p className="stat-number">{stats.accepted_bookings}</p>
+          </div>
+        </div>
+        
+        <div 
+          className="stat-card stat-clickable"
+          onClick={async () => {
+            try {
+              const bookings = await ApiService.getCustomerBookings('completed');
+              setActiveBookingsList(bookings);
+              setShowActiveBookings(true);
+            } catch (err) {
+              console.error('Error fetching completed bookings:', err);
+              alert('Failed to load completed bookings');
+            }
+          }}
+          title="Click to view completed bookings"
+        >
+          <FaCheck className="stat-icon completed-icon" />
+          <div className="stat-info">
+            <h4>Completed Bookings</h4>
+            <p className="stat-number">{stats.completed_bookings}</p>
+          </div>
+        </div>
+        
+        <div 
+          className="stat-card stat-clickable"
+          onClick={async () => {
+            try {
+              const bookings = await ApiService.getCustomerBookings();
+              setBookingHistoryList(bookings);
+              setShowBookingHistory(true);
+            } catch (err) {
+              console.error('Error fetching booking history:', err);
+              alert('Failed to load booking history');
+            }
+          }}
+          title="Click to view booking history"
+        >
+          <FaCalendarAlt className="stat-icon history-icon" />
           <div className="stat-info">
             <h4>{t("dashboard.customer.bookingHistory")}</h4>
-            <p className="stat-number">0</p>
+            <p className="stat-number">{stats.booking_history}</p>
           </div>
         </div>
-        <div
+        
+        <div 
           className="stat-card stat-clickable"
-          onClick={handleViewSavedProviders}
+          onClick={async () => {
+            try {
+              const saved = providers.filter(p => p.is_saved);
+              setSavedProvidersList(saved);
+              setShowSavedProviders(true);
+            } catch (err) {
+              console.error('Error fetching saved providers:', err);
+              alert('Failed to load saved providers');
+            }
+          }}
           title="Click to view saved providers"
         >
-          <FaBookmark className="stat-icon" />
+          <FaHeart className="stat-icon saved-icon" />
           <div className="stat-info">
-            <h4>{t("savedProviders")}</h4>
-            <p className="stat-number">{savedProviders.length}</p>
+            <h4>{t("dashboard.customer.savedProviders")}</h4>
+            <p className="stat-number">{stats.saved_providers}</p>
+          </div>
+        </div>
+        
+        <div 
+          className="stat-card stat-clickable"
+          onClick={async () => {
+            try {
+              const bookings = await ApiService.getCustomerBookings('cancelled');
+              setActiveBookingsList(bookings);
+              setShowActiveBookings(true);
+            } catch (err) {
+              console.error('Error fetching cancelled bookings:', err);
+              alert('Failed to load cancelled bookings');
+            }
+          }}
+          title="Click to view cancelled bookings"
+        >
+          <FaTimes className="stat-icon cancelled-icon" />
+          <div className="stat-info">
+            <h4>Cancelled Bookings</h4>
+            <p className="stat-number">{stats.cancelled_bookings}</p>
           </div>
         </div>
       </div>
@@ -418,17 +608,15 @@ function CustomerDashboard({ t }) {
           <>
             <div className="providers-grid">
               {currentProviders.map((provider) => (
-                <div key={provider.id} className="provider-card">
+                <div key={provider.phone} className="provider-card">
                   <div className="provider-header">
                     <FaUserCircle className="provider-avatar" />
                     <div className="provider-info">
                       <h4 className="provider-name">{provider.name}</h4>
                       <div className="provider-rating">
                         <FaStar className="star-icon" />
-                        <span className="rating-value">{provider.rating}</span>
-                        <span className="reviews-count">
-                          ({provider.reviews} reviews)
-                        </span>
+                        <span className="rating-value">{provider.rating.toFixed(1)}</span>
+                        <span className="reviews-count">({provider.reviews_count} reviews)</span>
                       </div>
                     </div>
                   </div>
@@ -436,32 +624,25 @@ function CustomerDashboard({ t }) {
                     <div className="service-badge">
                       <FaTools /> {provider.service}
                     </div>
-                    <p className="provider-description">
-                      {provider.description}
-                    </p>
+                    <p className="provider-description">{provider.description || 'No description available'}</p>
                     <div className="provider-location">
                       <FaMapMarkerAlt className="location-icon" />
-                      <span>{provider.location}</span>
+                      <span>{provider.location || 'Location not specified'}</span>
                     </div>
                   </div>
                   <div className="provider-actions">
-                    <button className="book-btn">Book Now</button>
-                    <button
-                      className={`save-btn ${
-                        isProviderSaved(provider.id) ? "saved" : ""
-                      }`}
-                      onClick={() => handleSaveProvider(provider)}
-                      title={
-                        isProviderSaved(provider.id)
-                          ? "Remove from saved"
-                          : "Save provider"
-                      }
+                    <button 
+                      className="book-btn"
+                      onClick={() => handleOpenProviderModal(provider)}
                     >
-                      {isProviderSaved(provider.id) ? (
-                        <FaBookmark />
-                      ) : (
-                        <FaRegBookmark />
-                      )}
+                      Book Now
+                    </button>
+                    <button 
+                      className={`save-btn ${provider.is_saved ? 'saved' : ''}`}
+                      onClick={() => handleSaveProvider(provider.phone, provider.is_saved)}
+                      title={provider.is_saved ? 'Unsave' : 'Save'}
+                    >
+                      <FaHeart />
                     </button>
                   </div>
                 </div>
@@ -514,72 +695,430 @@ function CustomerDashboard({ t }) {
         )}
       </section>
 
-      {/* Saved Providers Modal */}
-      {showSavedProviders && (
-        <div className="modal-overlay" onClick={handleCloseSavedProviders}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      {/* Provider Profile Modal */}
+      {showProviderModal && selectedProvider && (
+        <ProviderProfileModal
+          provider={selectedProvider}
+          onClose={handleCloseProviderModal}
+          onBook={handleBookProvider}
+          onToggleSave={handleSaveProvider}
+        />
+      )}
+
+      {/* Active Bookings Modal */}
+      {showActiveBookings && (
+        <div className="modal-overlay" onClick={() => setShowActiveBookings(false)}>
+          <div className="modal-container large-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Saved Providers</h3>
-              <button
-                className="modal-close-btn"
-                onClick={handleCloseSavedProviders}
-              >
-                <FaTimes />
-              </button>
+              <h2>📅 Active Bookings</h2>
+              <button className="close-btn" onClick={() => setShowActiveBookings(false)}>×</button>
             </div>
             <div className="modal-body">
-              {savedProviders.length > 0 ? (
-                <div className="saved-providers-list">
-                  {savedProviders.map((provider) => (
-                    <div key={provider.id} className="saved-provider-card">
-                      <div className="provider-header">
-                        <FaUserCircle className="provider-avatar" />
-                        <div className="provider-info">
-                          <h4 className="provider-name">{provider.name}</h4>
-                          <div className="provider-rating">
-                            <FaStar className="star-icon" />
-                            <span className="rating-value">
-                              {provider.rating}
-                            </span>
-                            <span className="reviews-count">
-                              ({provider.reviews} reviews)
-                            </span>
-                          </div>
-                        </div>
+              {activeBookingsList.length > 0 ? (
+                <div className="bookings-list">
+                  {activeBookingsList.map((booking) => (
+                    <div key={booking.id} className="booking-item clickable" onClick={() => {
+                      setSelectedBooking(booking);
+                      setShowBookingDetails(true);
+                    }}>
+                      <div className="booking-header">
+                        <h4>{booking.provider_name}</h4>
+                        <span className={`status-badge ${booking.status}`}>{booking.status}</span>
                       </div>
-                      <div className="provider-body">
-                        <div className="service-badge">
-                          <FaTools /> {provider.service}
+                      <p><strong>Service:</strong> {booking.service}</p>
+                      <p><strong>Location:</strong> {booking.location || 'N/A'}</p>
+                      
+                      {/* Acceptance Notification with Verification */}
+                      {booking.status === 'accepted' && !booking.acceptance_verified && (
+                        <div className="acceptance-notification">
+                          <p className="notification-text">
+                            ✅ Provider accepted your booking!
+                            <br />
+                            <small>Click below to verify the provider's identity</small>
+                          </p>
+                          <button 
+                            className="verify-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedBooking(booking);
+                              setShowAcceptanceModal(true);
+                              setAcceptanceCodeInput('');
+                              setAcceptanceValidationError('');
+                            }}
+                          >
+                            🔐 Verify Provider
+                          </button>
                         </div>
-                        <p className="provider-description">
-                          {provider.description}
-                        </p>
-                        <div className="provider-location">
-                          <FaMapMarkerAlt className="location-icon" />
-                          <span>{provider.location}</span>
+                      )}
+
+                      {/* Show verification success and completion button */}
+                      {booking.status === 'accepted' && booking.acceptance_verified && (
+                        <div className="verified-notification">
+                          <p className="notification-text">
+                            ✅ Provider verified!
+                            <br />
+                            <small>Work in progress</small>
+                          </p>
+                          <button 
+                            className="complete-btn"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const response = await ApiService.completeBooking(booking.id);
+                                // Show review modal immediately with completion code
+                                setSelectedBooking(booking);
+                                setCompletionCodeInput(response.completion_code || '');
+                                setRating(5);
+                                setReviewComment('');
+                                setReviewError('');
+                                setShowReviewModal(true);
+                                // Refresh bookings
+                                const updatedBookings = await ApiService.getCustomerBookings();
+                                setActiveBookingsList(updatedBookings.filter(b => b.status === 'pending' || b.status === 'accepted'));
+                              } catch (err) {
+                                alert(err.message || 'Failed to mark as finished');
+                              }
+                            }}
+                          >
+                            ✅ Mark as Finished
+                          </button>
                         </div>
-                      </div>
-                      <div className="provider-actions">
-                        <button className="book-btn">Book Now</button>
-                        <button
-                          className="remove-btn"
-                          onClick={() => handleRemoveSavedProvider(provider.id)}
+                      )}
+
+                      {/* Rating Option after Completion */}
+                      {booking.status === 'completed' && (
+                        <button 
+                          className="rate-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedBooking(booking);
+                            setShowReviewModal(true);
+                            setCompletionCodeInput('');
+                            setRating(5);
+                            setReviewComment('');
+                            setReviewError('');
+                          }}
                         >
-                          <FaTimes /> Remove
+                          ⭐ Rate Provider
                         </button>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="empty-state">
-                  <FaBookmark className="empty-icon" />
-                  <p>No saved providers yet</p>
-                  <p className="empty-subtitle">
-                    Save providers to easily find them later
-                  </p>
-                </div>
+                <p className="no-data">No active bookings found</p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking History Modal */}
+      {showBookingHistory && (
+        <div className="modal-overlay" onClick={() => setShowBookingHistory(false)}>
+          <div className="modal-container large-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>🕐 Booking History</h2>
+              <button className="close-btn" onClick={() => setShowBookingHistory(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              {bookingHistoryList.length > 0 ? (
+                <div className="bookings-list">
+                  {bookingHistoryList.map((booking) => (
+                    <div key={booking.id} className="booking-item clickable" onClick={() => {
+                      setSelectedBooking(booking);
+                      setShowBookingDetails(true);
+                    }}>
+                      <div className="booking-header">
+                        <h4>{booking.provider_name}</h4>
+                        <span className={`status-badge ${booking.status}`}>{booking.status}</span>
+                      </div>
+                      <p><strong>Service:</strong> {booking.service}</p>
+                      <p><strong>Date:</strong> {new Date(booking.created_at).toLocaleDateString()}</p>
+                      <p><strong>Location:</strong> {booking.location || 'N/A'}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="no-data">No booking history found</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saved Providers Modal */}
+      {showSavedProviders && (
+        <div className="modal-overlay" onClick={() => setShowSavedProviders(false)}>
+          <div className="modal-container large-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>❤️ Saved Providers</h2>
+              <button className="close-btn" onClick={() => setShowSavedProviders(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              {savedProvidersList.length > 0 ? (
+                <div className="providers-grid">
+                  {savedProvidersList.map((provider) => (
+                    <div 
+                      key={provider.phone || provider.id} 
+                      className="provider-card clickable" 
+                      onClick={() => {
+                        setSelectedProvider(provider);
+                        setShowProviderModal(true);
+                        setShowSavedProviders(false);
+                      }}
+                    >
+                      <h4>{provider.name}</h4>
+                      <p key="service"><FaTools /> {provider.service}</p>
+                      <p key="location"><FaMapMarkerAlt /> {provider.location_name}</p>
+                      <p key="rating"><FaStar /> {provider.rating ? provider.rating.toFixed(1) : 'N/A'}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="no-data">No saved providers found</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Details Modal */}
+      {showBookingDetails && selectedBooking && (
+        <div className="modal-overlay" onClick={() => setShowBookingDetails(false)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>📋 Booking Details</h2>
+              <button className="close-btn" onClick={() => setShowBookingDetails(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="booking-details">
+                <div className="detail-row">
+                  <span className="label">Provider:</span>
+                  <span className="value">{selectedBooking.provider_name}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Service:</span>
+                  <span className="value">{selectedBooking.service}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Status:</span>
+                  <span className={`status-badge ${selectedBooking.status}`}>{selectedBooking.status}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Location:</span>
+                  <span className="value">{selectedBooking.location || 'N/A'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Description:</span>
+                  <span className="value">{selectedBooking.description || 'N/A'}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Created:</span>
+                  <span className="value">{new Date(selectedBooking.created_at).toLocaleString()}</span>
+                </div>
+                {selectedBooking.booking_type && (
+                  <div className="detail-row">
+                    <span className="label">Type:</span>
+                    <span className="value">{selectedBooking.booking_type}</span>
+                  </div>
+                )}
+                {selectedBooking.scheduled_date && (
+                  <div className="detail-row">
+                    <span className="label">Scheduled:</span>
+                    <span className="value">{selectedBooking.scheduled_date} at {selectedBooking.scheduled_time}</span>
+                  </div>
+                )}
+                {selectedBooking.acceptance_code && (
+                  <div className="detail-row highlight">
+                    <span className="label">🔑 Acceptance Code:</span>
+                    <span className="value code">{selectedBooking.acceptance_code}</span>
+                  </div>
+                )}
+                {selectedBooking.completion_code && (
+                  <div className="detail-row highlight">
+                    <span className="label">✅ Completion Code:</span>
+                    <span className="value code">{selectedBooking.completion_code}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Acceptance Code Verification Modal */}
+      {showAcceptanceModal && selectedBooking && (
+        <div className="modal-overlay" onClick={() => setShowAcceptanceModal(false)}>
+          <div className="modal-container verification-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>🔐 Verify Provider Identity</h2>
+              <button className="close-btn" onClick={() => setShowAcceptanceModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="verification-content">
+                <p className="instruction-text">
+                  The provider has accepted your booking for <strong>{selectedBooking.service}</strong>.
+                </p>
+                <p className="instruction-text">
+                  Ask the provider to show you their <strong>6-digit acceptance code</strong> and enter it below to verify their identity.
+                </p>
+                
+                <div className="code-input-section">
+                  <label htmlFor="acceptance-code">Enter Acceptance Code:</label>
+                  <input
+                    id="acceptance-code"
+                    type="text"
+                    className="code-input"
+                    placeholder="000000"
+                    maxLength="6"
+                    value={acceptanceCodeInput}
+                    onChange={(e) => {
+                      setAcceptanceCodeInput(e.target.value.replace(/\D/g, ''));
+                      setAcceptanceValidationError('');
+                    }}
+                  />
+                  {acceptanceValidationError && (
+                    <p className="error-message">{acceptanceValidationError}</p>
+                  )}
+                </div>
+
+                <div className="modal-actions">
+                  <button 
+                    className="cancel-btn"
+                    onClick={() => {
+                      setShowAcceptanceModal(false);
+                      setAcceptanceCodeInput('');
+                      setAcceptanceValidationError('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className="verify-btn-primary"
+                    onClick={() => {
+                      if (acceptanceCodeInput.length !== 6) {
+                        setAcceptanceValidationError('Please enter a 6-digit code');
+                        return;
+                      }
+                      if (acceptanceCodeInput === selectedBooking.acceptance_code) {
+                        // Mark as verified (in real app, this would be an API call)
+                        setShowAcceptanceModal(false);
+                        setAcceptanceCodeInput('');
+                        // Show success notification
+                        const updatedBookings = activeBookingsList.map(b => 
+                          b.id === selectedBooking.id ? {...b, acceptance_verified: true} : b
+                        );
+                        setActiveBookingsList(updatedBookings);
+                      } else {
+                        setAcceptanceValidationError('❌ Invalid code. Please check with the provider.');
+                      }
+                    }}
+                  >
+                    ✅ Verify Code
+                  </button>
+                </div>
+
+                <div className="security-note">
+                  <p>🛡️ Security Note: Never share your codes with anyone except the service provider when they arrive.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal with Completion Code - MANDATORY */}
+      {showReviewModal && selectedBooking && (
+        <div className="modal-overlay" onClick={() => {/* Prevent closing - review is mandatory */}}>
+          <div className="modal-container review-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>⭐ Rate Your Experience (Required)</h2>
+              <div className="mandatory-badge">✓ Mandatory to Complete Booking</div>
+            </div>
+            <div className="modal-body">
+              <div className="review-content">
+                <p className="review-subtitle">Service by <strong>{selectedBooking.provider_name}</strong></p>
+                
+                <div className="completion-info-box">
+                  <h4>📋 Completion Code</h4>
+                  <p className="completion-code-display">{completionCodeInput || 'Loading...'}</p>
+                  <p className="info-text">This code was automatically generated when you marked the work as finished.</p>
+                </div>
+                
+                {/* Rating Section */}
+                <div className="rating-section">
+                  <label>Your Rating: <span className="required">*</span></label>
+                  <div className="star-rating">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <span
+                        key={star}
+                        className={`star ${star <= rating ? 'filled' : ''}`}
+                        onClick={() => setRating(star)}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                  <p className="rating-text">{rating} out of 5 stars</p>
+                </div>
+
+                <div className="comment-section">
+                  <label htmlFor="review-comment">Your Review (Optional):</label>
+                  <textarea
+                    id="review-comment"
+                    className="review-textarea"
+                    placeholder="Share your experience with this provider..."
+                    rows="4"
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                  />
+                </div>
+
+                {reviewError && (
+                  <p className="error-message">{reviewError}</p>
+                )}
+
+                <div className="modal-actions">
+                  <button 
+                    className="submit-review-btn primary-action"
+                    onClick={async () => {
+                      if (!completionCodeInput || completionCodeInput.length !== 6) {
+                        setReviewError('Completion code is required');
+                        return;
+                      }
+                      
+                      try {
+                        await ApiService.createReview({
+                          booking_id: selectedBooking.id,
+                          completion_code: completionCodeInput,
+                          rating: rating,
+                          comment: reviewComment || null
+                        });
+                        
+                        alert('✅ Review submitted successfully! Booking is now complete.');
+                        setShowReviewModal(false);
+                        setCompletionCodeInput('');
+                        setRating(5);
+                        setReviewComment('');
+                        setReviewError('');
+                        
+                        // Refresh bookings and stats
+                        const [updatedBookings, updatedStats] = await Promise.all([
+                          ApiService.getCustomerBookings(),
+                          ApiService.getCustomerStats()
+                        ]);
+                        setActiveBookingsList(updatedBookings.filter(b => b.status === 'pending' || b.status === 'accepted'));
+                        setStats(updatedStats);
+                      } catch (err) {
+                        setReviewError(err.message || 'Failed to submit review');
+                      }
+                    }}
+                  >
+                    ✅ Submit Review & Complete Booking
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -637,99 +1176,109 @@ function ProviderDashboard({ t, userName, handleLogout }) {
 
     fetchProfile();
   }, [userName]);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [showJobDetails, setShowJobDetails] = useState(false);
+  const [stats, setStats] = useState({
+    avg_rating: 0,
+    total_reviews: 0,
+    customers_served: 0,
+    active_bookings: 0,
+    pending_requests: 0,
+    accepted_jobs: 0,
+    reviews: [],
+    served_customers: []
+  });
+  const [workRequests, setWorkRequests] = useState([]);
+  const [acceptedJobs, setAcceptedJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Modal states for reviews and customers
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [showCustomersModal, setShowCustomersModal] = useState(false);
 
-  // New requests waiting for accept/reject
-  const [workRequests, setWorkRequests] = useState([
-    {
-      id: 1,
-      customerName: "John Doe",
-      location: "Mumbai, Maharashtra",
-      service: "Plumbing",
-      description: "Kitchen sink repair needed",
-    },
-    {
-      id: 2,
-      customerName: "Sarah Smith",
-      location: "Pune, Maharashtra",
-      service: "Electrical",
-      description: "Wiring issue in bedroom",
-    },
-    {
-      id: 3,
-      customerName: "Raj Patel",
-      location: "Ahmedabad, Gujarat",
-      service: "Carpentry",
-      description: "Door frame repair",
-    },
-  ]);
-
-  // Accepted jobs that are not yet completed
-  const [acceptedJobs, setAcceptedJobs] = useState([
-    {
-      id: 101,
-      customerName: "Maria Garcia",
-      location: "Delhi, NCR",
-      service: "Plumbing",
-      description: "Bathroom pipe leakage",
-      acceptedDate: "2025-10-01",
-      oneTimeCode: 123456,
-    },
-    {
-      id: 102,
-      customerName: "David Wilson",
-      location: "Bangalore, Karnataka",
-      service: "Electrical",
-      description: "AC installation required",
-      acceptedDate: "2025-10-02",
-      oneTimeCode: 789012,
-    },
-  ]);
-
-  // Generate a unique 6-digit code
-  const generateUniqueCode = () => {
-    return Math.floor(100000 + Math.random() * 900000);
-  };
-
-  const handleAcceptRequest = (request) => {
-    // Generate a unique code for this request
-    const code = generateUniqueCode();
-
-    // Move from workRequests to acceptedJobs with code
-    setAcceptedJobs((prev) => [
-      ...prev,
-      {
-        ...request,
-        id: Date.now(), // Generate new ID for accepted job
-        acceptedDate: new Date().toISOString().split("T")[0],
-        oneTimeCode: code,
-      },
-    ]);
-    setWorkRequests((prev) => prev.filter((req) => req.id !== request.id));
-    // TODO: Send accept request to backend
-    console.log("Accepted request:", request.id, "Code:", code);
-  };
-
-  const handleRejectRequest = (requestId) => {
-    // Show confirmation dialog in selected language
-    const confirmed = window.confirm(t("common.confirmRejectRequest"));
-
-    if (confirmed) {
-      setWorkRequests((prev) => prev.filter((req) => req.id !== requestId));
-      // TODO: Send reject request to backend
-      console.log("Rejected request:", requestId);
+  // Fetch provider data
+  const fetchProviderData = async () => {
+    try {
+      setError(null);
+      const [statsData, pendingData, acceptedData] = await Promise.all([
+        ApiService.getProviderStats(),
+        ApiService.getProviderPendingRequests(),
+        ApiService.getProviderAcceptedJobs()
+      ]);
+      
+      setStats(statsData);
+      setWorkRequests(pendingData || []);
+      setAcceptedJobs(acceptedData || []);
+      console.log('✅ Provider data refreshed:', {
+        pending: pendingData?.length || 0,
+        accepted: acceptedData?.length || 0
+      });
+    } catch (err) {
+      console.error('Error fetching provider data:', err);
+      setError(err.message || 'Failed to fetch dashboard data');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCancelJob = (jobId) => {
-    // Show confirmation dialog in selected language
-    const confirmed = window.confirm(t("common.confirmCancelJob"));
+  // Initial fetch on mount
+  useEffect(() => {
+    fetchProviderData();
+  }, []);
 
-    if (confirmed) {
-      setAcceptedJobs((prev) => prev.filter((job) => job.id !== jobId));
-      // TODO: Send cancel job request to backend
-      console.log("Cancelled job:", jobId);
+  // Auto-refresh every 10 seconds for real-time updates
+  useEffect(() => {
+    console.log('🔄 Auto-refresh enabled: Checking for new bookings every 10 seconds');
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing provider data...');
+      fetchProviderData();
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAcceptRequest = async (request) => {
+    try {
+      const response = await ApiService.acceptBooking(request.id);
+      alert(`✅ Booking accepted!\n\nYour acceptance code: ${response.acceptance_code || 'N/A'}\n\nShare this code with the customer when you meet them.`);
+      // Refresh data to show updated lists
+      await fetchProviderData();
+    } catch (err) {
+      console.error('Error accepting request:', err);
+      alert(err.message || 'Failed to accept booking');
     }
   };
+
+  const handleRejectRequest = async (requestId) => {
+    if (!confirm('Are you sure you want to reject this booking?')) return;
+    
+    try {
+      await ApiService.rejectBooking(requestId);
+      alert('✅ Booking rejected');
+      // Refresh data to remove rejected booking
+      await fetchProviderData();
+    } catch (err) {
+      console.error('Error rejecting request:', err);
+      alert(err.message || 'Failed to reject booking');
+    }
+  };
+
+  const handleCancelJob = async (jobId) => {
+    if (!confirm('Are you sure you want to cancel this job?')) return;
+    
+    try {
+      await ApiService.cancelJob(jobId);
+      alert('✅ Job cancelled');
+      // Refresh data to remove cancelled job
+      await fetchProviderData();
+    } catch (err) {
+      console.error('Error cancelling job:', err);
+      alert(err.message || 'Failed to cancel job');
+    }
+  };
+
+  // Completion is now handled by customer, not provider
 
   const handleViewAcceptedJobs = () => {
     setShowAcceptedJobs(true);
@@ -869,20 +1418,50 @@ function ProviderDashboard({ t, userName, handleLogout }) {
       </header>
 
       <div className="dashboard-content">
-        {/* Stats Cards */}
+        {/* Welcome Message */}
+        <section className="welcome-section">
+          <h3>
+            {t("common.welcome")} {userName}
+          </h3>
+        </section>
+
+        {/* Loading/Error States */}
+        {loading && (
+          <div className="loading-message">
+            <p>Loading dashboard data...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="error-message">
+            <p>❌ {error}</p>
+            <button onClick={fetchProviderData}>Retry</button>
+          </div>
+        )}
+
+        {/* Stats Cards - Clickable with Detailed Modals */}
         <div className="stats-grid">
-          <div className="stat-card">
+          <div 
+            className="stat-card stat-clickable"
+            onClick={() => setShowReviewsModal(true)}
+            title="Click to view all reviews"
+          >
             <FaStar className="stat-icon" />
             <div className="stat-info">
               <h4>{t("dashboard.provider.avgRating")}</h4>
-              <p className="stat-number">0.0</p>
+              <p className="stat-number">{stats.avg_rating.toFixed(1)}</p>
+              <small>{stats.total_reviews} reviews</small>
             </div>
           </div>
-          <div className="stat-card">
+          <div 
+            className="stat-card stat-clickable"
+            onClick={() => setShowCustomersModal(true)}
+            title="Click to view served customers"
+          >
             <FaCheckCircle className="stat-icon" />
             <div className="stat-info">
               <h4>{t("dashboard.provider.customersServed")}</h4>
-              <p className="stat-number">0</p>
+              <p className="stat-number">{stats.customers_served}</p>
             </div>
           </div>
           <div
@@ -893,7 +1472,7 @@ function ProviderDashboard({ t, userName, handleLogout }) {
             <FaClipboardList className="stat-icon" />
             <div className="stat-info">
               <h4>{t("dashboard.provider.acceptedJobs")}</h4>
-              <p className="stat-number">{acceptedJobs.length}</p>
+              <p className="stat-number">{stats.accepted_jobs}</p>
             </div>
           </div>
         </div>
@@ -916,12 +1495,22 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                       <FaUser className="customer-icon" />
                       <div>
                         <h4 className="customer-name">
-                          {request.customerName}
+                          {request.customer_name}
                         </h4>
                         <p className="customer-location">
                           <FaMapMarkerAlt className="location-icon" />
-                          {request.location}
+                          {request.location || 'Location not specified'}
                         </p>
+                        {request.booking_type === 'scheduled' && (
+                          <p className="booking-time">
+                            <FaClock /> {request.scheduled_date} at {request.scheduled_time}
+                          </p>
+                        )}
+                        {request.booking_type === 'immediate' && (
+                          <span className="immediate-badge">
+                            <FaCheckCircle /> Immediate Booking
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -929,7 +1518,10 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                     <div className="service-badge">
                       <FaTools /> {request.service}
                     </div>
-                    <p className="request-description">{request.description}</p>
+                    <p className="request-description">{request.description || 'No description provided'}</p>
+                    <p className="booking-code">
+                      Code: <strong>{request.one_time_code}</strong>
+                    </p>
                   </div>
                   <div className="request-actions">
                     <button
@@ -976,58 +1568,88 @@ function ProviderDashboard({ t, userName, handleLogout }) {
                 {acceptedJobs.length > 0 ? (
                   <div className="accepted-jobs-list">
                     {acceptedJobs.map((job) => (
-                      <div key={job.id} className="accepted-job-card">
+                      <div 
+                        key={job.id} 
+                        className="accepted-job-card clickable-job"
+                        onClick={() => {
+                          setSelectedJob(job);
+                          setShowJobDetails(true);
+                        }}
+                        title="Click to view full details"
+                      >
                         <div className="job-header">
                           <div className="customer-info">
                             <FaUser className="customer-icon" />
                             <div>
                               <h4 className="customer-name">
-                                {job.customerName}
+                                {job.customer_name}
                               </h4>
                               <p className="customer-location">
                                 <FaMapMarkerAlt className="location-icon" />
-                                {job.location}
+                                {job.location || 'Location not specified'}
                               </p>
                             </div>
                           </div>
-                          <div className="accepted-date">
-                            <FaCalendarAlt className="date-icon" />
-                            <span>
-                              {t("common.accepted")}: {job.acceptedDate}
-                            </span>
-                          </div>
+                          {job.booking_type && (
+                            <div className="booking-type-badge">
+                              {job.booking_type === 'immediate' ? (
+                                <span className="badge-immediate">
+                                  <FaClock /> Immediate
+                                </span>
+                              ) : (
+                                <span className="badge-scheduled">
+                                  <FaCalendarAlt /> Scheduled: {job.scheduled_date} at {job.scheduled_time}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="job-body">
                           <div className="service-badge">
                             <FaTools /> {job.service}
                           </div>
-                          <p className="job-description">{job.description}</p>
-
-                          {/* Display One-Time Code */}
-                          {job.oneTimeCode && (
-                            <div className="job-code-display">
+                          <p className="job-description">{job.description || 'No description provided'}</p>
+                          
+                          {/* Display Acceptance Code - Main Feature */}
+                          {job.acceptance_code && (
+                            <div className="job-code-display acceptance-code">
                               <div className="code-label">
                                 <FaClipboardList className="code-icon" />
-                                <span>
-                                  {t("dashboard.provider.yourOneTimeCode")}
-                                </span>
+                                <span>🔑 Acceptance Code (Share with Customer)</span>
                               </div>
                               <div className="code-value-container">
-                                <h3 className="code-value">
-                                  {job.oneTimeCode}
-                                </h3>
+                                <h3 className="code-value">{job.acceptance_code}</h3>
+                                <button 
+                                  className="copy-code-btn"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(job.acceptance_code);
+                                    alert('✅ Code copied to clipboard!');
+                                  }}
+                                  title="Copy code"
+                                >
+                                  📋 Copy
+                                </button>
                               </div>
+                              <p className="code-instruction">
+                                ⚠️ Customer must enter this code to verify they met the correct provider
+                              </p>
                             </div>
                           )}
                         </div>
                         <div className="job-actions">
                           <button
                             className="cancel-btn"
-                            onClick={() => handleCancelJob(job.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelJob(job.id);
+                            }}
                           >
-                            <FaTimes /> {t("dashboard.provider.cancelRequest")}
+                            <FaTimes /> Cancel
                           </button>
                         </div>
+                        <p className="completion-note">
+                          ℹ️ Customer will complete this booking after work is finished
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -1045,211 +1667,241 @@ function ProviderDashboard({ t, userName, handleLogout }) {
           </div>
         )}
 
-        {/* Profile Modal */}
-        {showProfile && (
-          <div className="modal-overlay" onClick={handleCloseProfile}>
-            <div
-              className="modal-content profile-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
+        {/* Job Details Modal */}
+        {showJobDetails && selectedJob && (
+          <div className="modal-overlay" onClick={() => setShowJobDetails(false)}>
+            <div className="modal-container job-details-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3>
-                  <FaUserCircle style={{ marginRight: "0.5rem" }} />
-                  {t("common.profile")}
-                </h3>
-                <button
-                  className="modal-close-btn"
-                  onClick={handleCloseProfile}
-                >
-                  <FaTimes />
-                </button>
+                <h2>🔍 Job Details</h2>
+                <button className="close-btn" onClick={() => setShowJobDetails(false)}>×</button>
               </div>
-              <div className="modal-body profile-body">
-                {!isEditingProfile ? (
-                  /* View Mode */
-                  <div className="profile-view">
-                    <div className="profile-avatar-section">
-                      <FaUserCircle className="profile-avatar-large" />
-                      <h2>{profileData.name}</h2>
+              <div className="modal-body">
+                <div className="job-full-details">
+                  
+                  {/* Customer Information */}
+                  <div className="detail-section">
+                    <h3>📋 Customer Information</h3>
+                    <div className="detail-row">
+                      <span className="label">Name:</span>
+                      <span className="value">{selectedJob.customer_name}</span>
                     </div>
-
-                    <div className="profile-info-grid">
-                      <div className="profile-info-item">
-                        <FaEnvelope className="profile-icon" />
-                        <div>
-                          <label>Email</label>
-                          <p>{profileData.email}</p>
-                        </div>
-                      </div>
-
-                      <div className="profile-info-item">
-                        <FaPhone className="profile-icon" />
-                        <div>
-                          <label>Phone</label>
-                          <p>{profileData.phone}</p>
-                        </div>
-                      </div>
-
-                      <div className="profile-info-item">
-                        <FaHome className="profile-icon" />
-                        <div>
-                          <label>Address</label>
-                          <p>{profileData.address}</p>
-                        </div>
-                      </div>
-
-                      <div className="profile-info-item">
-                        <FaTools className="profile-icon" />
-                        <div>
-                          <label>Specialization</label>
-                          <p>{profileData.specialization}</p>
-                        </div>
-                      </div>
-
-                      <div className="profile-info-item">
-                        <FaBriefcase className="profile-icon" />
-                        <div>
-                          <label>Experience</label>
-                          <p>{profileData.experience}</p>
-                        </div>
-                      </div>
-
-                      <div className="profile-info-item full-width">
-                        <FaClipboardList className="profile-icon" />
-                        <div>
-                          <label>Bio</label>
-                          <p>{profileData.bio}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="profile-actions">
-                      <button
-                        className="edit-profile-btn"
-                        onClick={handleEditProfile}
-                      >
-                        <FaEdit /> Edit Profile
-                      </button>
+                    <div className="detail-row">
+                      <span className="label">Phone:</span>
+                      <span className="value">{selectedJob.customer_phone}</span>
                     </div>
                   </div>
+
+                  {/* Service Details */}
+                  <div className="detail-section">
+                    <h3>🛠️ Service Details</h3>
+                    <div className="detail-row">
+                      <span className="label">Service:</span>
+                      <span className="value">{selectedJob.service}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Type:</span>
+                      <span className={`booking-type-badge ${selectedJob.booking_type}`}>
+                        {selectedJob.booking_type === 'immediate' ? '⚡ Immediate' : '📅 Scheduled'}
+                      </span>
+                    </div>
+                    {selectedJob.booking_type === 'scheduled' && (
+                      <div className="detail-row">
+                        <span className="label">Scheduled:</span>
+                        <span className="value">{selectedJob.scheduled_date} at {selectedJob.scheduled_time}</span>
+                      </div>
+                    )}
+                    <div className="detail-row">
+                      <span className="label">Location:</span>
+                      <span className="value">{selectedJob.location || 'Not specified'}</span>
+                    </div>
+                    <div className="detail-row full-width">
+                      <span className="label">Description:</span>
+                      <span className="value">{selectedJob.description || 'No description provided'}</span>
+                    </div>
+                  </div>
+
+                  {/* Verification Codes */}
+                  <div className="detail-section codes-section">
+                    <h3>🔑 Verification Codes</h3>
+                    {selectedJob.acceptance_code && (
+                      <div className="code-display-box acceptance">
+                        <div className="code-header">
+                          <span>🔑 Acceptance Code</span>
+                          <button 
+                            className="copy-code-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(selectedJob.acceptance_code);
+                              alert('✅ Code copied!');
+                            }}
+                          >
+                            📋 Copy
+                          </button>
+                        </div>
+                        <div className="code-value-large">{selectedJob.acceptance_code}</div>
+                        <p className="code-hint">Share this with customer to verify meeting</p>
+                      </div>
+                    )}
+                    {selectedJob.completion_code && (
+                      <div className="code-display-box completion">
+                        <div className="code-header">
+                          <span>✅ Completion Code</span>
+                          <button 
+                            className="copy-code-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(selectedJob.completion_code);
+                              alert('✅ Code copied!');
+                            }}
+                          >
+                            📋 Copy
+                          </button>
+                        </div>
+                        <div className="code-value-large">{selectedJob.completion_code}</div>
+                        <p className="code-hint">Customer needs this to leave a review</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status */}
+                  <div className="detail-section">
+                    <h3>📊 Status</h3>
+                    <div className="detail-row">
+                      <span className="label">Current Status:</span>
+                      <span className={`status-badge-large ${selectedJob.status}`}>{selectedJob.status}</span>
+                    </div>
+                    <div className="detail-row">
+                      <span className="label">Created:</span>
+                      <span className="value">{new Date(selectedJob.created_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="job-actions-detailed">
+                    <button
+                      className="action-btn complete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowJobDetails(false);
+                        handleCompleteJob(selectedJob.id);
+                      }}
+                    >
+                      <FaCheckCircle /> Complete Job
+                    </button>
+                    <button
+                      className="action-btn cancel-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowJobDetails(false);
+                        handleCancelJob(selectedJob.id);
+                      }}
+                    >
+                      <FaTimes /> Cancel Job
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reviews Modal - Show all customer reviews with details */}
+        {showReviewsModal && (
+          <div className="modal-overlay" onClick={() => setShowReviewsModal(false)}>
+            <div className="modal-container large-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>⭐ Customer Reviews</h2>
+                <button className="close-btn" onClick={() => setShowReviewsModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                {stats.reviews && stats.reviews.length > 0 ? (
+                  <div className="reviews-list">
+                    {stats.reviews.map((review, index) => (
+                      <div key={index} className="review-card">
+                        <div className="review-header">
+                          <div className="customer-info">
+                            <div className="customer-avatar">
+                              {review.customer_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <h4>{review.customer_name}</h4>
+                              <p className="review-service">🔧 {review.service}</p>
+                            </div>
+                          </div>
+                          <div className="review-rating">
+                            <div className="stars">
+                              {[...Array(5)].map((_, i) => (
+                                <span key={i} className={i < review.rating ? 'star filled' : 'star'}>★</span>
+                              ))}
+                            </div>
+                            <span className="rating-value">{review.rating.toFixed(1)}/5</span>
+                          </div>
+                        </div>
+                        <div className="review-body">
+                          <p className="review-comment">
+                            {review.comment || <em>No comment provided</em>}
+                          </p>
+                        </div>
+                        <div className="review-footer">
+                          <span className="review-date">📅 {review.created_at}</span>
+                          <span className="review-phone">📞 {review.customer_phone}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  /* Edit Mode */
-                  <div className="profile-edit">
-                    <div className="profile-avatar-section">
-                      <FaUserCircle className="profile-avatar-large" />
-                      <h2>Edit Profile</h2>
-                    </div>
+                  <div className="empty-state">
+                    <FaStar className="empty-icon" />
+                    <p>No reviews yet</p>
+                    <p className="empty-subtitle">Complete jobs to receive customer reviews</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
-                    <div className="profile-form">
-                      <div className="form-group">
-                        <label>
-                          <FaUser className="form-icon" /> Name
-                        </label>
-                        <input
-                          type="text"
-                          value={editedProfile.name}
-                          onChange={(e) =>
-                            handleProfileChange("name", e.target.value)
-                          }
-                        />
+        {/* Served Customers Modal - Show all customers with details */}
+        {showCustomersModal && (
+          <div className="modal-overlay" onClick={() => setShowCustomersModal(false)}>
+            <div className="modal-container large-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>👥 Served Customers</h2>
+                <button className="close-btn" onClick={() => setShowCustomersModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                {stats.served_customers && stats.served_customers.length > 0 ? (
+                  <div className="customers-list">
+                    {stats.served_customers.map((customer, index) => (
+                      <div key={index} className="customer-card">
+                        <div className="customer-card-header">
+                          <div className="customer-avatar-large">
+                            {customer.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="customer-details">
+                            <h4>{customer.name}</h4>
+                            <p className="customer-phone">📞 {customer.phone}</p>
+                          </div>
+                        </div>
+                        <div className="customer-card-body">
+                          <div className="detail-row">
+                            <span className="label">🔧 Service:</span>
+                            <span className="value">{customer.service}</span>
+                          </div>
+                          <div className="detail-row">
+                            <span className="label">📅 Booking Date:</span>
+                            <span className="value">{customer.booking_date}</span>
+                          </div>
+                        </div>
                       </div>
-
-                      <div className="form-group">
-                        <label>
-                          <FaEnvelope className="form-icon" /> Email
-                        </label>
-                        <input
-                          type="email"
-                          value={editedProfile.email}
-                          onChange={(e) =>
-                            handleProfileChange("email", e.target.value)
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>
-                          <FaPhone className="form-icon" /> Phone
-                        </label>
-                        <input
-                          type="tel"
-                          value={editedProfile.phone}
-                          onChange={(e) =>
-                            handleProfileChange("phone", e.target.value)
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>
-                          <FaHome className="form-icon" /> Address
-                        </label>
-                        <input
-                          type="text"
-                          value={editedProfile.address}
-                          onChange={(e) =>
-                            handleProfileChange("address", e.target.value)
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>
-                          <FaTools className="form-icon" /> Specialization
-                        </label>
-                        <input
-                          type="text"
-                          value={editedProfile.specialization}
-                          onChange={(e) =>
-                            handleProfileChange(
-                              "specialization",
-                              e.target.value
-                            )
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label>
-                          <FaBriefcase className="form-icon" /> Experience
-                        </label>
-                        <input
-                          type="text"
-                          value={editedProfile.experience}
-                          onChange={(e) =>
-                            handleProfileChange("experience", e.target.value)
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group full-width">
-                        <label>
-                          <FaClipboardList className="form-icon" /> Bio
-                        </label>
-                        <textarea
-                          rows="4"
-                          value={editedProfile.bio}
-                          onChange={(e) =>
-                            handleProfileChange("bio", e.target.value)
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="profile-actions">
-                      <button
-                        className="save-profile-btn"
-                        onClick={handleSaveProfile}
-                      >
-                        <FaSave /> Save Changes
-                      </button>
-                      <button
-                        className="cancel-edit-btn"
-                        onClick={handleCancelEdit}
-                      >
-                        <FaTimes /> Cancel
-                      </button>
-                    </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <FaUser className="empty-icon" />
+                    <p>No customers served yet</p>
+                    <p className="empty-subtitle">Complete bookings to build your customer base</p>
                   </div>
                 )}
               </div>
