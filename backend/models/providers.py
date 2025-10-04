@@ -8,6 +8,7 @@ class Provider(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)
     bio = Column(String, nullable=True)
     location_name = Column(String(255), nullable=True)
+    years_of_experience = Column(Integer, nullable=True)
     # geom = Column(Geometry('POINT', srid=4326), nullable=True)  # Commented out for now
     average_rating = Column(Numeric(2, 1), default=0.0)
     jobs_completed = Column(Integer, default=0)
