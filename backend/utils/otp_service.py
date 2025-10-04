@@ -19,6 +19,7 @@ OTP_PROVIDER = os.getenv("OTP_PROVIDER", "MSG91")  # MSG91 or TWILIO
 OTP_LENGTH = int(os.getenv("OTP_LENGTH", "6"))
 OTP_EXPIRY_MINUTES = int(os.getenv("OTP_EXPIRY_MINUTES", "5"))
 MAX_OTP_ATTEMPTS = int(os.getenv("MAX_OTP_ATTEMPTS", "3"))
+DEVELOPMENT_MODE = os.getenv("DEVELOPMENT_MODE", "false").lower() == "true"
 
 def generate_otp(length: int = OTP_LENGTH) -> str:
     """Generate random numeric OTP"""
@@ -71,7 +72,31 @@ async def send_otp_via_twilio(phone: str, otp: str) -> bool:
         return True
         
     except Exception as e:
-        print(f"❌ Error sending OTP via Twilio: {str(e)}")
+        error_message = str(e)
+        print(f"❌ Error sending OTP via Twilio: {error_message}")
+        
+        # Check if it's a trial account error (unverified number)
+        if "unverified" in error_message.lower() or "21608" in error_message:
+            print(f"")
+            print(f"⚠️  TWILIO TRIAL ACCOUNT LIMITATION")
+            print(f"⚠️  The phone number {phone} is not verified in your Twilio account.")
+            print(f"")
+            print(f"💡 SOLUTIONS:")
+            print(f"   1. Verify this number at: https://www.twilio.com/console/phone-numbers/verified")
+            print(f"   2. Or upgrade to a paid Twilio account")
+            print(f"   3. Or enable DEVELOPMENT_MODE in .env for testing")
+            print(f"")
+            print(f"🔧 DEVELOPMENT MODE:")
+            print(f"   Add to .env: DEVELOPMENT_MODE=true")
+            print(f"   This will skip SMS sending and just print OTP to console")
+            print(f"")
+            
+            # If in development mode, still return True to allow login
+            if DEVELOPMENT_MODE:
+                print(f"🔓 DEVELOPMENT_MODE is ON - OTP saved to database")
+                print(f"✅ You can use the OTP shown above to login")
+                return True
+        
         import traceback
         print(traceback.format_exc())
         return False
@@ -89,6 +114,18 @@ async def send_otp(phone: str, otp: str) -> bool:
         bool: True if sent successfully
     """
     print(f"📤 OTP Provider: {OTP_PROVIDER}")
+    
+    # If in development mode, skip SMS and just log OTP
+    if DEVELOPMENT_MODE:
+        print(f"")
+        print(f"🔓 ==================== DEVELOPMENT MODE ====================")
+        print(f"📱 Phone: {phone}")
+        print(f"🔑 OTP: {otp}")
+        print(f"⏰ Valid for: {OTP_EXPIRY_MINUTES} minutes")
+        print(f"✅ OTP saved to database - Use this code to login!")
+        print(f"🔓 ==========================================================")
+        print(f"")
+        return True
     
     if OTP_PROVIDER == "TWILIO":
         return await send_otp_via_twilio(phone, otp)

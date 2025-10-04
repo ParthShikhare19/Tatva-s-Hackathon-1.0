@@ -171,7 +171,7 @@ class ApiService {
   }
 
   async completeBooking(bookingId) {
-    return this.request('/dashboard/provider/complete-booking', {
+    return this.request('/dashboard/customer/complete-booking', {
       method: 'POST',
       body: JSON.stringify({ booking_id: bookingId }),
     });

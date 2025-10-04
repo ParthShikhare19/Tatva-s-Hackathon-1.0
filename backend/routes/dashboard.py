@@ -12,12 +12,42 @@ from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime, timezone
 import random
+import re
 
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
+# Phone number normalization helper
+def normalize_phone(phone: str) -> str:
+    """Normalize phone number by removing all non-digit characters"""
+    if not phone:
+        return phone
+    # Remove all non-digit characters
+    normalized = re.sub(r'\D', '', phone)
+    # Remove leading country code if present (91 for India)
+    if normalized.startswith('91') and len(normalized) > 10:
+        normalized = normalized[2:]
+    return normalized
+
+
 # Pydantic Schemas
+class ReviewDetail(BaseModel):
+    customer_name: str
+    customer_phone: str
+    rating: float
+    comment: Optional[str]
+    created_at: str
+    service: str
+
+
+class CustomerDetail(BaseModel):
+    name: str
+    phone: str
+    service: str
+    booking_date: str
+
+
 class ProviderStats(BaseModel):
     avg_rating: float
     total_reviews: int
@@ -25,12 +55,18 @@ class ProviderStats(BaseModel):
     active_bookings: int
     pending_requests: int
     accepted_jobs: int
+    reviews: List[ReviewDetail] = []
+    served_customers: List[CustomerDetail] = []
 
 
 class CustomerStats(BaseModel):
     active_bookings: int
     booking_history: int
     saved_providers: int
+    pending_bookings: int
+    accepted_bookings: int
+    completed_bookings: int
+    cancelled_bookings: int
 
 
 class CreateBookingRequest(BaseModel):
@@ -73,12 +109,12 @@ class BookingResponse(BaseModel):
     description: Optional[str]
     location: Optional[str]
     status: str
-    booking_type: str
-    scheduled_date: Optional[str]
-    scheduled_time: Optional[str]
-    one_time_code: Optional[str]
-    acceptance_code: Optional[str]
-    completion_code: Optional[str]
+    booking_type: Optional[str] = "immediate"
+    scheduled_date: Optional[str] = None
+    scheduled_time: Optional[str] = None
+    one_time_code: Optional[str] = None
+    acceptance_code: Optional[str] = None
+    completion_code: Optional[str] = None
     created_at: datetime
 
 
@@ -115,10 +151,41 @@ async def get_customer_stats(
         SavedProvider.customer_phone == current_user.phone_number
     ).count()
     
+    # Pending bookings
+    pending_bookings = db.query(Booking).filter(
+        Booking.customer_phone == current_user.phone_number,
+        Booking.status == BookingStatus.PENDING
+    ).count()
+    
+    # Accepted bookings
+    accepted_bookings = db.query(Booking).filter(
+        Booking.customer_phone == current_user.phone_number,
+        Booking.status == BookingStatus.ACCEPTED
+    ).count()
+    
+    # Completed bookings
+    completed_bookings = db.query(Booking).filter(
+        Booking.customer_phone == current_user.phone_number,
+        Booking.status == BookingStatus.COMPLETED
+    ).count()
+    
+    # Cancelled bookings
+    cancelled_bookings = db.query(Booking).filter(
+        Booking.customer_phone == current_user.phone_number,
+        or_(
+            Booking.status == BookingStatus.CANCELLED,
+            Booking.status == BookingStatus.REJECTED
+        )
+    ).count()
+    
     return CustomerStats(
         active_bookings=active_bookings,
         booking_history=booking_history,
-        saved_providers=saved_providers
+        saved_providers=saved_providers,
+        pending_bookings=pending_bookings,
+        accepted_bookings=accepted_bookings,
+        completed_bookings=completed_bookings,
+        cancelled_bookings=cancelled_bookings
     )
 
 
@@ -135,17 +202,34 @@ async def create_booking(
             detail="Only customers can create bookings"
         )
     
-    # Verify provider exists
-    provider = db.query(User).filter(
-        User.phone_number == request.provider_phone,
-        User.role == "provider"
-    ).first()
+    # Normalize phone numbers for consistent matching
+    normalized_provider_phone = normalize_phone(request.provider_phone)
+    
+    print(f"\n📝 Creating booking:")
+    print(f"   Customer: {current_user.name} ({current_user.phone_number})")
+    print(f"   Provider phone (from request): {request.provider_phone}")
+    print(f"   Provider phone (normalized): {normalized_provider_phone}")
+    
+    # Find provider - check all providers and match normalized phones
+    all_providers = db.query(User).filter(User.role == "provider").all()
+    provider = None
+    
+    for p in all_providers:
+        if normalize_phone(p.phone_number) == normalized_provider_phone:
+            provider = p
+            break
     
     if not provider:
+        print(f"   ❌ Provider not found with normalized phone: {normalized_provider_phone}")
+        print(f"   Available providers:")
+        for p in all_providers[:5]:
+            print(f"      - {p.name}: {p.phone_number} (norm: {normalize_phone(p.phone_number)})")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Provider not found"
+            detail=f"Provider not found with phone: {request.provider_phone}"
         )
+    
+    print(f"   ✅ Found provider: {provider.name} (Phone in DB: {provider.phone_number})")
     
     # Get provider location from Provider model
     provider_profile = db.query(Provider).filter(
@@ -163,10 +247,10 @@ async def create_booking(
     else:
         full_description = f"Scheduled for {request.scheduled_date} at {request.scheduled_time}. {request.description or ''}".strip()
     
-    # Create booking
+    # Create booking - USE PROVIDER'S ACTUAL PHONE FROM DATABASE
     new_booking = Booking(
         customer_phone=current_user.phone_number,
-        provider_phone=request.provider_phone,
+        provider_phone=provider.phone_number,  # Use provider's phone from DB, not request
         service=request.service,
         description=full_description,
         location=location,
@@ -180,6 +264,16 @@ async def create_booking(
     db.add(new_booking)
     db.commit()
     db.refresh(new_booking)
+    
+    # Debug logging
+    print(f"✅ Booking created successfully!")
+    print(f"   Booking ID: {new_booking.id}")
+    print(f"   Customer Phone: {new_booking.customer_phone}")
+    print(f"   Provider Phone: {new_booking.provider_phone}")
+    print(f"   Service: {new_booking.service}")
+    print(f"   Status: {new_booking.status}")
+    print(f"   Type: {new_booking.booking_type}")
+    print(f"   Code: {new_booking.one_time_code}")
     
     return {
         "success": True,
@@ -305,19 +399,50 @@ async def get_customer_bookings(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get customer's bookings"""
-    query = db.query(Booking).filter(
-        Booking.customer_phone == current_user.phone_number
-    )
+    """Get customer's bookings with optional status filter"""
+    # Normalize the current user's phone
+    normalized_customer_phone = normalize_phone(current_user.phone_number)
     
+    # Find all bookings where normalized phones match
+    all_bookings = db.query(Booking).all()
+    matching_bookings = [
+        b for b in all_bookings 
+        if normalize_phone(b.customer_phone) == normalized_customer_phone
+    ]
+    
+    # Filter by status if provided
     if status_filter:
-        query = query.filter(Booking.status == status_filter)
+        status_upper = status_filter.upper()
+        if status_upper == 'ACTIVE':
+            # Active means PENDING or ACCEPTED
+            matching_bookings = [
+                b for b in matching_bookings 
+                if b.status in [BookingStatus.PENDING, BookingStatus.ACCEPTED]
+            ]
+        elif status_upper == 'CANCELLED':
+            # Cancelled includes both CANCELLED and REJECTED
+            matching_bookings = [
+                b for b in matching_bookings 
+                if b.status in [BookingStatus.CANCELLED, BookingStatus.REJECTED]
+            ]
+        else:
+            # Match exact status
+            try:
+                target_status = BookingStatus[status_upper]
+                matching_bookings = [
+                    b for b in matching_bookings 
+                    if b.status == target_status
+                ]
+            except KeyError:
+                # Invalid status, return empty list
+                matching_bookings = []
     
-    bookings = query.order_by(Booking.created_at.desc()).all()
+    # Sort by created_at descending
+    matching_bookings.sort(key=lambda x: x.created_at, reverse=True)
     
     # Enrich with user names
     result = []
-    for booking in bookings:
+    for booking in matching_bookings:
         provider = db.query(User).filter(User.phone_number == booking.provider_phone).first()
         customer = db.query(User).filter(User.phone_number == booking.customer_phone).first()
         
@@ -331,7 +456,12 @@ async def get_customer_bookings(
             description=booking.description,
             location=booking.location,
             status=booking.status.value,
+            booking_type=booking.booking_type or "immediate",
+            scheduled_date=booking.scheduled_date,
+            scheduled_time=booking.scheduled_time,
             one_time_code=booking.one_time_code,
+            acceptance_code=booking.acceptance_code,
+            completion_code=booking.completion_code,
             created_at=booking.created_at
         ))
     
@@ -352,6 +482,9 @@ async def get_provider_stats(
             detail="Only providers can access this endpoint"
         )
     
+    # Normalize provider phone
+    normalized_provider_phone = normalize_phone(current_user.phone_number)
+    
     # Average rating using provider_id (not provider_phone)
     rating_stats = db.query(
         func.avg(Review.rating).label('avg_rating'),
@@ -361,32 +494,52 @@ async def get_provider_stats(
     avg_rating = float(rating_stats.avg_rating) if rating_stats.avg_rating else 0.0
     total_reviews = rating_stats.total_reviews or 0
     
-    # Customers served (completed bookings)
-    customers_served = db.query(func.count(func.distinct(Booking.customer_phone))).filter(
-        Booking.provider_phone == current_user.phone_number,
-        Booking.status == BookingStatus.COMPLETED
-    ).scalar() or 0
+    # Get all bookings and filter by normalized phone
+    all_bookings = db.query(Booking).all()
+    provider_bookings = [b for b in all_bookings if normalize_phone(b.provider_phone) == normalized_provider_phone]
     
-    # Active bookings
-    active_bookings = db.query(Booking).filter(
-        Booking.provider_phone == current_user.phone_number,
-        or_(
-            Booking.status == BookingStatus.PENDING,
-            Booking.status == BookingStatus.ACCEPTED
-        )
-    ).count()
+    # Customers served (completed bookings)
+    completed_bookings = [b for b in provider_bookings if b.status == BookingStatus.COMPLETED]
+    unique_customers = set(b.customer_phone for b in completed_bookings)
+    customers_served = len(unique_customers)
+    
+    # Active bookings (pending or accepted)
+    # Active bookings (pending or accepted)
+    active_bookings = len([b for b in provider_bookings if b.status in [BookingStatus.PENDING, BookingStatus.ACCEPTED]])
     
     # Pending requests
-    pending_requests = db.query(Booking).filter(
-        Booking.provider_phone == current_user.phone_number,
-        Booking.status == BookingStatus.PENDING
-    ).count()
+    pending_requests = len([b for b in provider_bookings if b.status == BookingStatus.PENDING])
     
     # Accepted jobs
-    accepted_jobs = db.query(Booking).filter(
-        Booking.provider_phone == current_user.phone_number,
-        Booking.status == BookingStatus.ACCEPTED
-    ).count()
+    accepted_jobs = len([b for b in provider_bookings if b.status == BookingStatus.ACCEPTED])
+    
+    # Get detailed reviews with customer info
+    reviews_list = []
+    reviews = db.query(Review).filter(Review.provider_id == current_user.id).order_by(Review.created_at.desc()).all()
+    for review in reviews:
+        customer = db.query(User).filter(User.id == review.customer_id).first()
+        booking = db.query(Booking).filter(Booking.id == review.booking_id).first()
+        if customer and booking:
+            reviews_list.append(ReviewDetail(
+                customer_name=customer.name,
+                customer_phone=customer.phone_number,
+                rating=review.rating,
+                comment=review.comment or "No comment provided",
+                created_at=review.created_at.strftime("%Y-%m-%d %H:%M:%S") if review.created_at else "",
+                service=booking.service
+            ))
+    
+    # Get served customers with details
+    served_customers_list = []
+    for booking in completed_bookings:
+        customer = db.query(User).filter(User.phone_number == booking.customer_phone).first()
+        if customer:
+            served_customers_list.append(CustomerDetail(
+                name=customer.name,
+                phone=customer.phone_number,
+                service=booking.service,
+                booking_date=booking.created_at.strftime("%Y-%m-%d") if booking.created_at else ""
+            ))
     
     return ProviderStats(
         avg_rating=round(avg_rating, 1),
@@ -394,7 +547,9 @@ async def get_provider_stats(
         customers_served=customers_served,
         active_bookings=active_bookings,
         pending_requests=pending_requests,
-        accepted_jobs=accepted_jobs
+        accepted_jobs=accepted_jobs,
+        reviews=reviews_list,
+        served_customers=served_customers_list
     )
 
 
@@ -410,23 +565,49 @@ async def get_provider_pending_requests(
             detail="Only providers can access this endpoint"
         )
     
-    bookings = db.query(Booking).filter(
-        Booking.provider_phone == current_user.phone_number,
+    # Debug logging
+    print(f"\n📋 Fetching pending requests for provider:")
+    print(f"   Provider Name: {current_user.name}")
+    print(f"   Provider Phone (in DB): {current_user.phone_number}")
+    
+    # Normalize provider phone for matching
+    normalized_provider_phone = normalize_phone(current_user.phone_number)
+    print(f"   Provider Phone (normalized): {normalized_provider_phone}")
+    
+    # Get ALL pending bookings and filter in Python (more reliable than SQL regex)
+    all_pending_bookings = db.query(Booking).filter(
         Booking.status == BookingStatus.PENDING
     ).order_by(Booking.created_at.desc()).all()
+    
+    # Filter bookings that match this provider
+    bookings = []
+    for booking in all_pending_bookings:
+        normalized_booking_phone = normalize_phone(booking.provider_phone)
+        if normalized_booking_phone == normalized_provider_phone:
+            bookings.append(booking)
+    
+    print(f"   Total pending bookings in system: {len(all_pending_bookings)}")
+    print(f"   Bookings matching this provider: {len(bookings)}")
+    
+    if len(bookings) == 0 and len(all_pending_bookings) > 0:
+        print(f"   ⚠️  No matches found. Comparing phone numbers:")
+        for b in all_pending_bookings[:5]:
+            norm_booking_phone = normalize_phone(b.provider_phone)
+            match = "✅ MATCH" if norm_booking_phone == normalized_provider_phone else "❌ NO MATCH"
+            print(f"      - Booking ID {b.id}: {b.provider_phone} → {norm_booking_phone} {match}")
     
     # Enrich with customer names
     result = []
     for booking in bookings:
         customer = db.query(User).filter(User.phone_number == booking.customer_phone).first()
-        provider = db.query(User).filter(User.phone_number == booking.provider_phone).first()
+        provider_user = db.query(User).filter(User.phone_number == booking.provider_phone).first()
         
         result.append(BookingResponse(
             id=booking.id,
             customer_phone=booking.customer_phone,
             customer_name=customer.name if customer else "Unknown",
             provider_phone=booking.provider_phone,
-            provider_name=provider.name if provider else "Unknown",
+            provider_name=provider_user.name if provider_user else "Unknown",
             service=booking.service,
             description=booking.description,
             location=booking.location,
@@ -440,6 +621,7 @@ async def get_provider_pending_requests(
             created_at=booking.created_at
         ))
     
+    print(f"   ✅ Returning {len(result)} booking(s)\n")
     return result
 
 
@@ -455,10 +637,19 @@ async def get_provider_accepted_jobs(
             detail="Only providers can access this endpoint"
         )
     
-    bookings = db.query(Booking).filter(
-        Booking.provider_phone == current_user.phone_number,
+    # Normalize provider phone
+    normalized_provider_phone = normalize_phone(current_user.phone_number)
+    
+    # Get ALL accepted bookings and filter in Python
+    all_accepted_bookings = db.query(Booking).filter(
         Booking.status == BookingStatus.ACCEPTED
     ).order_by(Booking.created_at.desc()).all()
+    
+    # Filter bookings that match this provider
+    bookings = []
+    for booking in all_accepted_bookings:
+        if normalize_phone(booking.provider_phone) == normalized_provider_phone:
+            bookings.append(booking)
     
     # Enrich with customer names
     result = []
@@ -727,22 +918,22 @@ async def verify_acceptance_code(
     }
 
 
-@router.post("/provider/complete-booking")
+@router.post("/customer/complete-booking")
 async def complete_booking(
     request: AcceptBookingRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Provider marks booking as completed and generates completion code for review"""
-    if current_user.role != "provider":
+    """Customer requests to complete booking - generates completion code for mandatory review"""
+    if current_user.role != "customer":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only providers can complete bookings"
+            detail="Only customers can complete bookings"
         )
     
     booking = db.query(Booking).filter(
         Booking.id == request.booking_id,
-        Booking.provider_phone == current_user.phone_number,
+        Booking.customer_phone == current_user.phone_number,
         Booking.status == BookingStatus.ACCEPTED
     ).first()
     
@@ -752,20 +943,21 @@ async def complete_booking(
             detail="Booking not found or not in accepted status"
         )
     
-    # Generate completion code for review verification
+    # Generate completion code for mandatory review
     completion_code = str(random.randint(100000, 999999))
     
-    booking.status = BookingStatus.COMPLETED
+    # Store completion code but keep status as ACCEPTED
+    # Status will change to COMPLETED only after review is submitted
     booking.completion_code = completion_code
     
     db.commit()
     
     return {
         "success": True,
-        "message": "Booking completed successfully",
+        "message": "Work marked as finished. Please submit a review to complete the booking.",
         "booking_id": booking.id,
         "completion_code": completion_code,
-        "customer_phone": booking.customer_phone
+        "note": "Review is mandatory to complete this booking"
     }
 
 
@@ -782,7 +974,7 @@ async def create_review(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Customer creates a review after verifying completion code"""
+    """Customer creates a mandatory review - booking completion requires review"""
     if current_user.role != "customer":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -793,13 +985,19 @@ async def create_review(
     booking = db.query(Booking).filter(
         Booking.id == request.booking_id,
         Booking.customer_phone == current_user.phone_number,
-        Booking.status == BookingStatus.COMPLETED
+        Booking.status == BookingStatus.ACCEPTED  # Changed from COMPLETED
     ).first()
     
     if not booking:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Booking not found or not completed"
+            detail="Booking not found or not in accepted status"
+        )
+    
+    if not booking.completion_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please mark the work as finished first"
         )
     
     if booking.completion_code != request.completion_code:
@@ -829,7 +1027,7 @@ async def create_review(
     existing_review = db.query(Review).filter(
         Review.provider_id == provider.id,
         Review.customer_id == customer.id,
-        Review.job_code == booking.completion_code
+        Review.booking_id == booking.id
     ).first()
     
     if existing_review:
@@ -842,16 +1040,21 @@ async def create_review(
     review = Review(
         provider_id=provider.id,
         customer_id=customer.id,
-        job_code=booking.completion_code,
+        booking_id=booking.id,
         rating=request.rating,
         comment=request.comment
     )
     
     db.add(review)
+    
+    # NOW mark booking as completed (review is mandatory)
+    booking.status = BookingStatus.COMPLETED
+    
     db.commit()
     
     return {
         "success": True,
-        "message": "Review submitted successfully",
-        "review_id": review.id
+        "message": "Review submitted successfully and booking marked as completed",
+        "review_id": review.id,
+        "booking_status": "completed"
     }

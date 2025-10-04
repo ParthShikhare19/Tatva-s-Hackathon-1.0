@@ -11,7 +11,8 @@ class Review(Base):
     id = Column(Integer, primary_key=True, index=True)
     provider_id = Column(Integer, nullable=False, index=True)  # FK to users.id
     customer_id = Column(Integer, nullable=False, index=True)  # FK to users.id
-    job_code = Column(String(20), nullable=True, index=True)  # Changed from booking_id
+    booking_id = Column(Integer, nullable=True, index=True)  # Link to booking
+    job_code = Column(String(20), nullable=True, index=True)  # Legacy field, kept for compatibility
     rating = Column(Float, nullable=False)  # 1.0 to 5.0 (stored as numeric in DB)
     comment = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
