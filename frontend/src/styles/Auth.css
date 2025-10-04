@@ -103,8 +103,10 @@
 
 .form-group {
   position: relative;
-  display: flex;
-  align-items: center;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
   border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
@@ -123,25 +125,32 @@
 .input-icon {
   font-size: var(--font-size-2xl);
   margin-right: var(--spacing-md);
-  flex-shrink: 0;
-  display: flex;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  display: inline-flex !important;
   align-items: center;
+  justify-content: center;
   color: var(--color-primary-dark);
+  width: 24px;
+  height: 24px;
 }
 
 .input-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 24px !important;
+  height: 24px !important;
+  display: block !important;
 }
 
 .form-group input,
 .form-group textarea {
   border: none;
   outline: none;
-  flex: 1;
+  flex: 1 1 auto !important;
   font-size: var(--font-size-lg);
   color: var(--color-text-primary);
   font-family: var(--font-family);
+  min-width: 0;
+  display: block !important;
 }
 
 .form-group input::placeholder,

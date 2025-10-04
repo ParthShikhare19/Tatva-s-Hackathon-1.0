@@ -30,6 +30,11 @@ import {
   FaBriefcase,
   FaBookmark,
   FaRegBookmark,
+  FaLock,
+  FaShieldAlt,
+  FaKey,
+  FaHistory,
+  FaClipboardCheck,
 } from "react-icons/fa";
 import ApiService from "../services/api";
 import "../styles/Dashboard.css";
@@ -122,7 +127,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
   const [selectedRating, setSelectedRating] = useState("all");
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [providers, setProviders] = useState([]);
   const [stats, setStats] = useState({ 
     active_bookings: 0, 
@@ -367,7 +372,6 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
         `Provider: ${selectedProvider.name}\n` +
         `Service: ${bookingData.service}\n` +
         scheduleInfo +
-        `\nBooking Code: ${response.one_time_code}\n\n` +
         `The provider has been notified. Please save this code for reference.`
       );
       
@@ -512,7 +516,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
           }}
           title="Click to view saved providers"
         >
-          <FaHeart className="stat-icon saved-icon" />
+          <FaBookmark className="stat-icon saved-icon" />
           <div className="stat-info">
             <h4>{t("dashboard.customer.savedProviders")}</h4>
             <p className="stat-number">{stats.saved_providers}</p>
@@ -639,12 +643,6 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
       <section className="providers-section">
         <div className="section-header">
           <h3>{t("dashboard.customer.nearbyProviders")}</h3>
-          <button className="view-all-btn">{t("common.viewAll")}</button>
-        </div>
-        <div className="empty-state">
-          <FaMapMarkerAlt className="empty-icon" />
-          <p>{t("common.noDataYet")}</p>
-          <button className="get-started-btn">{t("common.getStarted")}</button>
         </div>
 
         {currentProviders.length > 0 ? (
@@ -685,7 +683,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
                       onClick={() => handleSaveProvider(provider.phone, provider.is_saved)}
                       title={provider.is_saved ? 'Unsave' : 'Save'}
                     >
-                      <FaHeart />
+                      <FaBookmark />
                     </button>
                   </div>
                 </div>
@@ -753,7 +751,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
         <div className="modal-overlay" onClick={() => setShowActiveBookings(false)}>
           <div className="modal-container large-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>📅 Active Bookings</h2>
+              <h2><FaCalendarAlt /> Active Bookings</h2>
               <button className="close-btn" onClick={() => setShowActiveBookings(false)}>×</button>
             </div>
             <div className="modal-body">
@@ -775,7 +773,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
                       {booking.status === 'accepted' && !booking.acceptance_verified && (
                         <div className="acceptance-notification">
                           <p className="notification-text">
-                            ✅ Provider accepted your booking!
+                            <FaCheckCircle /> Provider accepted your booking!
                             <br />
                             <small>Click below to verify the provider's identity</small>
                           </p>
@@ -789,7 +787,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
                               setAcceptanceValidationError('');
                             }}
                           >
-                            🔐 Verify Provider
+                            <FaLock /> Verify Provider
                           </button>
                         </div>
                       )}
@@ -798,7 +796,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
                       {booking.status === 'accepted' && booking.acceptance_verified && (
                         <div className="verified-notification">
                           <p className="notification-text">
-                            ✅ Provider verified!
+                            <FaCheckCircle /> Provider verified!
                             <br />
                             <small>Work in progress</small>
                           </p>
@@ -823,7 +821,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
                               }
                             }}
                           >
-                            ✅ Mark as Finished
+                            <FaCheck /> Mark as Finished
                           </button>
                         </div>
                       )}
@@ -861,7 +859,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
         <div className="modal-overlay" onClick={() => setShowBookingHistory(false)}>
           <div className="modal-container large-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>🕐 Booking History</h2>
+              <h2><FaHistory /> Booking History</h2>
               <button className="close-btn" onClick={() => setShowBookingHistory(false)}>×</button>
             </div>
             <div className="modal-body">
@@ -895,7 +893,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
         <div className="modal-overlay" onClick={() => setShowSavedProviders(false)}>
           <div className="modal-container large-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>❤️ Saved Providers</h2>
+              <h2><FaBookmark /> Saved Providers</h2>
               <button className="close-btn" onClick={() => setShowSavedProviders(false)}>×</button>
             </div>
             <div className="modal-body">
@@ -1056,7 +1054,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
         <div className="modal-overlay" onClick={() => setShowBookingDetails(false)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>📋 Booking Details</h2>
+              <h2><FaClipboardList /> Booking Details</h2>
               <button className="close-btn" onClick={() => setShowBookingDetails(false)}>×</button>
             </div>
             <div className="modal-body">
@@ -1099,13 +1097,13 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
                 )}
                 {selectedBooking.acceptance_code && (
                   <div className="detail-row highlight">
-                    <span className="label">🔑 Acceptance Code:</span>
+                    <span className="label"><FaKey /> Acceptance Code:</span>
                     <span className="value code">{selectedBooking.acceptance_code}</span>
                   </div>
                 )}
                 {selectedBooking.completion_code && (
                   <div className="detail-row highlight">
-                    <span className="label">✅ Completion Code:</span>
+                    <span className="label"><FaCheckCircle /> Completion Code:</span>
                     <span className="value code">{selectedBooking.completion_code}</span>
                   </div>
                 )}
@@ -1120,7 +1118,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
         <div className="modal-overlay" onClick={() => setShowAcceptanceModal(false)}>
           <div className="modal-container verification-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>🔐 Verify Provider Identity</h2>
+              <h2><FaLock /> Verify Provider Identity</h2>
               <button className="close-btn" onClick={() => setShowAcceptanceModal(false)}>×</button>
             </div>
             <div className="modal-body">
@@ -1183,12 +1181,12 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
                       }
                     }}
                   >
-                    ✅ Verify Code
+                    <FaCheck /> Verify Code
                   </button>
                 </div>
 
                 <div className="security-note">
-                  <p>🛡️ Security Note: Never share your codes with anyone except the service provider when they arrive.</p>
+                  <p><FaShieldAlt /> Security Note: Never share your codes with anyone except the service provider when they arrive.</p>
                 </div>
               </div>
             </div>
@@ -1201,15 +1199,15 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
         <div className="modal-overlay" onClick={() => {/* Prevent closing - review is mandatory */}}>
           <div className="modal-container review-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>⭐ Rate Your Experience (Required)</h2>
-              <div className="mandatory-badge">✓ Mandatory to Complete Booking</div>
+              <h2><FaStar /> Rate Your Experience (Required)</h2>
+              <div className="mandatory-badge"><FaCheckCircle /> Mandatory to Complete Booking</div>
             </div>
             <div className="modal-body">
               <div className="review-content">
                 <p className="review-subtitle">Service by <strong>{selectedBooking.provider_name}</strong></p>
                 
                 <div className="completion-info-box">
-                  <h4>📋 Completion Code</h4>
+                  <h4><FaClipboardCheck /> Completion Code</h4>
                   <p className="completion-code-display">{completionCodeInput || 'Loading...'}</p>
                   <p className="info-text">This code was automatically generated when you marked the work as finished.</p>
                 </div>
@@ -1264,7 +1262,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
                           comment: reviewComment || null
                         });
                         
-                        alert('✅ Review submitted successfully! Booking is now complete.');
+                        alert('<FaCheck /> Review submitted successfully! Booking is now complete.');
                         setShowReviewModal(false);
                         setCompletionCodeInput('');
                         setRating(5);
@@ -1283,7 +1281,7 @@ function CustomerDashboard({ t, userName, showProfile, setShowProfile }) {
                       }
                     }}
                   >
-                    ✅ Submit Review & Complete Booking
+                    <FaCheck /> Submit Review & Complete Booking
                   </button>
                 </div>
               </div>
@@ -1586,12 +1584,6 @@ function ProviderDashboard({ t, userName, handleLogout }) {
       </header>
 
       <div className="dashboard-content">
-        {/* Welcome Message */}
-        <section className="welcome-section">
-          <h3>
-            {t("common.welcome")} {userName}
-          </h3>
-        </section>
 
         {/* Loading/Error States */}
         {loading && (
@@ -1840,7 +1832,7 @@ function ProviderDashboard({ t, userName, handleLogout }) {
           <div className="modal-overlay" onClick={() => setShowJobDetails(false)}>
             <div className="modal-container job-details-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h2>🔍 Job Details</h2>
+                <h2><FaSearch /> Job Details</h2>
                 <button className="close-btn" onClick={() => setShowJobDetails(false)}>×</button>
               </div>
               <div className="modal-body">
@@ -1979,7 +1971,7 @@ function ProviderDashboard({ t, userName, handleLogout }) {
           <div className="modal-overlay" onClick={() => setShowReviewsModal(false)}>
             <div className="modal-container large-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h2>⭐ Customer Reviews</h2>
+                <h2><FaStar /> Customer Reviews</h2>
                 <button className="close-btn" onClick={() => setShowReviewsModal(false)}>×</button>
               </div>
               <div className="modal-body">
@@ -2035,7 +2027,7 @@ function ProviderDashboard({ t, userName, handleLogout }) {
           <div className="modal-overlay" onClick={() => setShowCustomersModal(false)}>
             <div className="modal-container large-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h2>👥 Served Customers</h2>
+                <h2><FaUser /> Served Customers</h2>
                 <button className="close-btn" onClick={() => setShowCustomersModal(false)}>×</button>
               </div>
               <div className="modal-body">
