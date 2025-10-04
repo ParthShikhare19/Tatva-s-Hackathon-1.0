@@ -29,8 +29,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(data: dict) -> str:
     """Create JWT access token"""
+    from datetime import timezone
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
     to_encode.update({"exp": expire})
     
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -38,8 +39,13 @@ def create_access_token(data: dict) -> str:
 
 def decode_access_token(token: str) -> Optional[dict]:
     """Decode and verify JWT token"""
+    from datetime import timezone
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload if payload["exp"] >= datetime.utcnow().timestamp() else None
-    except:
+        return payload if payload["exp"] >= datetime.now(timezone.utc).timestamp() else None
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+    except Exception:
         return None

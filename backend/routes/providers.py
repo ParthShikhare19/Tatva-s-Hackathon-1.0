@@ -190,7 +190,25 @@ def get_provider_profile_by_id(
             detail="Provider profile not found"
         )
     
-    return provider
+    # Get associated user
+    user = db.query(User).filter(User.id == provider_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found for this provider"
+        )
+    
+    # Return combined user and provider data
+    return ProviderProfileResponse(
+        user_id=provider.user_id,
+        name=user.name,
+        phone_number=user.phone_number,
+        bio=provider.bio,
+        location_name=provider.location_name,
+        average_rating=provider.average_rating,
+        jobs_completed=provider.jobs_completed,
+        is_verified=provider.is_verified
+    )
 
 @router.delete("/profile", status_code=status.HTTP_204_NO_CONTENT)
 def delete_provider_profile(
